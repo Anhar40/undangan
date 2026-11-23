@@ -1,7 +1,7 @@
+
 {
   "version": 2,
   "framework": null,
-  "public": true,
   "functions": {
     "api/index.php": {
       "runtime": "vercel-php@0.7.4",
@@ -9,17 +9,34 @@
       "maxDuration": 30
     }
   },
-  "routes": [
-    { "src": "/build/(.*)", "dest": "/build/$1" },
-    { "src": "/assets/(.*)", "dest": "/assets/$1" },
-    { "src": "/favicon.ico", "dest": "/favicon.ico" },
-    { "src": "/robots.txt", "dest": "/robots.txt" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/api/index.php" }
-  ],
-  "outputDirectory": "public",
-  "installCommand": "if command -v composer >/dev/null 2>&1; then composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist; else echo 'composer not found, skipping (vercel-php will handle PHP deps)'; fi && npm install --no-audit --no-fund",
+  "installCommand": "curl -fsSL https://getcomposer.org/installer -o /tmp/composer-installer.php && php /tmp/composer-installer.php --install-dir=/tmp --filename=composer && /tmp/composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist && npm ci",
   "buildCommand": "npm run build",
+  "outputDirectory": "public",
+  "routes": [
+    {
+      "src": "/build/(.*)",
+      "dest": "/build/$1"
+    },
+    {
+      "src": "/assets/(.*)",
+      "dest": "/assets/$1"
+    },
+    {
+      "src": "/favicon.ico",
+      "dest": "/favicon.ico"
+    },
+    {
+      "src": "/robots.txt",
+      "dest": "/robots.txt"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api/index.php"
+    }
+  ],
   "env": {
     "APP_ENV": "production",
     "APP_DEBUG": "false",
