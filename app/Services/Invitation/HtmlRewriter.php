@@ -3,15 +3,15 @@
 namespace App\Services\Invitation;
 
 use App\Data\InvitationViewData;
+use App\Models\Setting;
 use App\Models\Template;
+use Carbon\Carbon;
 
 class HtmlRewriter
 {
     private const DIV_TAG = '~</?div\b~i';
 
-    public function __construct(private readonly string $key)
-    {
-    }
+    public function __construct(private readonly string $key) {}
 
     public function e(?string $value): string
     {
@@ -103,10 +103,10 @@ class HtmlRewriter
         $length = $bounds['openEnd'] + 1 - $bounds['start'];
         $openTag = substr($html, $bounds['start'], $length);
         $quotedAttribute = preg_quote($attribute, '~');
-        $replacement = ' ' . $attribute . '="' . $this->e($value) . '"';
+        $replacement = ' '.$attribute.'="'.$this->e($value).'"';
         $count = 0;
         $newOpenTag = preg_replace_callback(
-            '~\s' . $quotedAttribute . '\s*=\s*(["\']).*?\1~is',
+            '~\s'.$quotedAttribute.'\s*=\s*(["\']).*?\1~is',
             static fn (array $matches): string => $replacement,
             $openTag,
             1,
@@ -122,7 +122,7 @@ class HtmlRewriter
             if ($closing === false) {
                 return $html;
             }
-            $newOpenTag = substr($openTag, 0, $closing) . $replacement . substr($openTag, $closing);
+            $newOpenTag = substr($openTag, 0, $closing).$replacement.substr($openTag, $closing);
         }
 
         return substr_replace($html, $newOpenTag, $bounds['start'], $length);
@@ -153,7 +153,7 @@ class HtmlRewriter
                     static fn (string $class): bool => $class !== 'hidden',
                 ));
 
-                return ' class="' . implode(' ', $classes) . '"';
+                return ' class="'.implode(' ', $classes).'"';
             },
             $openTag,
             1,
@@ -226,13 +226,13 @@ class HtmlRewriter
 
         if (preg_match($pattern, trim($inner), $matches)) {
             $leading = substr($inner, 0, strpos($inner, '<'));
-            $newInner = $leading . $matches[1] . $content . $matches[4];
+            $newInner = $leading.$matches[1].$content.$matches[4];
         } else {
             // preg_replace_callback avoids "$1" being parsed as "$12" when the
             // replacement content starts with a digit (e.g. a date like 12.12.2026).
             $newInner = preg_replace_callback(
                 '~(<[^>]+>)([^<]+)(</[^>]+>)~is',
-                static fn (array $matches): string => $matches[1] . $content . $matches[3],
+                static fn (array $matches): string => $matches[1].$content.$matches[3],
                 $inner,
                 1,
             ) ?? $inner;
@@ -253,7 +253,7 @@ class HtmlRewriter
         $value = $this->e($value);
         $inner = preg_replace_callback(
             '~(<span class="elementor-icon-list-text"[^>]*>).*?(</span>)~is',
-            static fn (array $matches): string => $matches[1] . $value . $matches[2],
+            static fn (array $matches): string => $matches[1].$value.$matches[2],
             $inner,
             1,
         ) ?? $inner;
@@ -272,7 +272,7 @@ class HtmlRewriter
         $label = $this->e($label);
         $inner = preg_replace_callback(
             '~(<span class="elementor-button-text"[^>]*>).*?(</span>)~is',
-            static fn (array $matches): string => $matches[1] . $label . $matches[2],
+            static fn (array $matches): string => $matches[1].$label.$matches[2],
             $inner,
             1,
         ) ?? $inner;
@@ -291,7 +291,7 @@ class HtmlRewriter
         $value = $this->e($value);
         $inner = preg_replace_callback(
             '~(<div class="copy-content spancontent"[^>]*>).*?(</div>)~is',
-            static fn (array $matches): string => $matches[1] . $value . $matches[2],
+            static fn (array $matches): string => $matches[1].$value.$matches[2],
             $inner,
             1,
         ) ?? $inner;
@@ -312,7 +312,7 @@ class HtmlRewriter
 
     public function replaceDivInnerByClass(string $html, string $className, string $inner): string
     {
-        $pattern = '~<div\b[^>]*\bclass="[^"]*\b' . preg_quote($className, '~') . '\b[^"]*"[^>]*>~i';
+        $pattern = '~<div\b[^>]*\bclass="[^"]*\b'.preg_quote($className, '~').'\b[^"]*"[^>]*>~i';
 
         if (! preg_match($pattern, $html, $matches, PREG_OFFSET_CAPTURE)) {
             return $html;
@@ -364,10 +364,10 @@ class HtmlRewriter
             return $html;
         }
 
-        $inner = preg_replace('~data-to-value="\d+"~', 'data-to-value="' . $value . '"', $inner) ?? $inner;
+        $inner = preg_replace('~data-to-value="\d+"~', 'data-to-value="'.$value.'"', $inner) ?? $inner;
         $inner = preg_replace(
             '~(<span class="elementor-counter-number"[^>]*>)\s*\d*\s*(</span>)~i',
-            '${1}' . $value . '${2}',
+            '${1}'.$value.'${2}',
             $inner,
         ) ?? $inner;
 
@@ -385,9 +385,9 @@ class HtmlRewriter
         $url = $this->e($url);
 
         if (preg_match('~href="[^"]*"~i', $inner)) {
-            $inner = preg_replace('~href="[^"]*"~i', 'href="' . $url . '"', $inner, 1);
+            $inner = preg_replace('~href="[^"]*"~i', 'href="'.$url.'"', $inner, 1);
         } else {
-            $inner = preg_replace('~(<a\b[^>]*)(>)~i', '$1 href="' . $url . '"$2', $inner, 1);
+            $inner = preg_replace('~(<a\b[^>]*)(>)~i', '$1 href="'.$url.'"$2', $inner, 1);
         }
 
         return $this->replaceWidgetInner($html, $dataId, $inner ?? '');
@@ -403,7 +403,7 @@ class HtmlRewriter
     public function setBackgroundGallery(string $html, string $dataId, array|string|null $urls): string
     {
         $urls = is_array($urls) ? array_values(array_filter($urls)) : ($urls ? [$urls] : []);
-        $needle = 'data-id="' . $dataId . '"';
+        $needle = 'data-id="'.$dataId.'"';
         $position = strpos($html, $needle);
 
         if ($position === false) {
@@ -429,10 +429,10 @@ class HtmlRewriter
                 (string) $url,
                 JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR,
             );
-            $items[] = '&quot;id&quot;:' . $index . ',&quot;url&quot;:' . e($jsonUrl);
+            $items[] = '&quot;id&quot;:'.$index.',&quot;url&quot;:'.e($jsonUrl);
         }
 
-        $encoded = 'background_slideshow_gallery&quot;:' . ($items !== [] ? '[{' . implode('},{', $items) . '}]' : '[]');
+        $encoded = 'background_slideshow_gallery&quot;:'.($items !== [] ? '[{'.implode('},{', $items).'}]' : '[]');
         $openingTag = substr($html, $openStart, $openEnd - $openStart + 1);
         $updatedTag = preg_replace('~background_slideshow_gallery&quot;:\[.*?\]~s', $encoded, $openingTag, 1);
 
@@ -478,7 +478,7 @@ class HtmlRewriter
             return $html;
         }
 
-        $image = '<img decoding="async" src="' . $this->e($url) . '" alt="">';
+        $image = '<img decoding="async" src="'.$this->e($url).'" alt="">';
         $inner = preg_replace('~<img\b[^>]*>~i', $image, $inner, 1) ?? $inner;
 
         return $this->replaceWidgetInner($html, $dataId, $inner);
@@ -521,10 +521,10 @@ class HtmlRewriter
         $slides = '';
         foreach (array_values($urls) as $index => $url) {
             $slides .= '<div class="swiper-slide">'
-                . '<div class="elementor-carousel-image" role="img"'
-                . ' aria-label="Foto ' . ($index + 1) . '"'
-                . ' style="background-image: url(' . $this->e($url) . ')"></div>'
-                . '</div>';
+                .'<div class="elementor-carousel-image" role="img"'
+                .' aria-label="Foto '.($index + 1).'"'
+                .' style="background-image: url('.$this->e($url).')"></div>'
+                .'</div>';
         }
 
         $inner = substr_replace($inner, $slides, $openEnd + 1, $closeStart - $openEnd - 1);
@@ -545,13 +545,13 @@ class HtmlRewriter
             return preg_replace_callback(
                 $audioPattern,
                 static fn (array $matches): string => $matches[1]
-                    . (preg_replace(
+                    .(preg_replace(
                         '~(<source\b[^>]*\bsrc=)["\'][^"\']*["\']~i',
                         '$1""',
                         $matches[2],
                         1,
                     ) ?? $matches[2])
-                    . $matches[3],
+                    .$matches[3],
                 $html,
                 1,
             ) ?? $html;
@@ -560,17 +560,17 @@ class HtmlRewriter
         if (preg_match($audioPattern, $html, $matches)) {
             $body = preg_replace(
                 '~<source\b[^>]*>~i',
-                '<source src="' . $this->e($url) . '" type="audio/mpeg">',
+                '<source src="'.$this->e($url).'" type="audio/mpeg">',
                 $matches[2],
                 1,
             ) ?? $matches[2];
 
-            return str_replace($matches[0], $matches[1] . $body . $matches[3], $html);
+            return str_replace($matches[0], $matches[1].$body.$matches[3], $html);
         }
 
-        $player = '<audio id="song" preload="none"><source src="' . $this->e($url) . '" type="audio/mpeg"></audio>';
+        $player = '<audio id="song" preload="none"><source src="'.$this->e($url).'" type="audio/mpeg"></audio>';
 
-        return str_replace('</body>', $player . '</body>', $html);
+        return str_replace('</body>', $player.'</body>', $html);
     }
 
     /** Replace sample text everywhere it survived the targeted widget edits. */
@@ -627,7 +627,7 @@ class HtmlRewriter
             ];
 
             foreach ($patterns as $pattern) {
-                if (preg_match('~' . $pattern . '~i', $script)) {
+                if (preg_match('~'.$pattern.'~i', $script)) {
                     return '';
                 }
             }
@@ -663,15 +663,15 @@ class HtmlRewriter
             [
                 '/assets/templates/tema1/music/',
                 '/assets/templates/tema1/music/',
-                '/assets/templates/' . $this->key . '/',
-                '/assets/templates/' . $this->key . '/',
+                '/assets/templates/'.$this->key.'/',
+                '/assets/templates/'.$this->key.'/',
             ],
             $html,
         );
 
         // Plain URLs in CSS, src, href and inline scripts.
         $html = preg_replace('~https?://api\.sewaundangan\.com/music/~i', '/assets/templates/tema1/music/', $html) ?? $html;
-        $html = preg_replace('~https?://(?:www\.)?bukaundangan\.com/~i', '/assets/templates/' . $this->key . '/', $html) ?? $html;
+        $html = preg_replace('~https?://(?:www\.)?bukaundangan\.com/~i', '/assets/templates/'.$this->key.'/', $html) ?? $html;
 
         // Mirrored files were saved without their WordPress cache-busting query.
         $html = preg_replace('~(/assets/templates/[^"\'<>\s\)]+)\?[^"\'<>\s\)]*~', '$1', $html) ?? $html;
@@ -685,48 +685,117 @@ class HtmlRewriter
         array $hiddenIds = [],
         array $hiddenWidgets = [],
     ): string {
+        if (preg_match('/<html\b[^>]*\blang=/i', $html)) {
+            $html = preg_replace('/(<html\b[^>]*\blang=")[^"]*"/i', '$1id"', $html, 1) ?? $html;
+        } else {
+            $html = preg_replace('/<html\b/i', '<html lang="id"', $html, 1) ?? $html;
+        }
+
         $shareTitle = trim((string) ($data->shareTitle ?? ''));
         $shareDescription = trim((string) ($data->shareDescription ?? ''));
         $shareImage = trim((string) ($data->shareImage ?? ''));
         $shareUrl = trim((string) ($data->endpoints['public'] ?? ''));
 
-        $title = $this->e($shareTitle !== '' ? $shareTitle : $data->title . ' — ' . $data->coupleLabel());
-        $description = $this->e($shareDescription !== '' ? $shareDescription : $data->invitationMessage);
-        $head = '<meta name="viewport" content="width=device-width, initial-scale=1">' . "\n"
-            . '<meta name="theme-color" content="#B5935A">' . "\n"
-            . '<link rel="icon" href="/assets/site/img/favicon.svg" type="image/svg+xml">' . "\n"
-            . "<title>{$title}</title>\n"
-            . '<meta name="description" content="' . $description . '">' . "\n"
-            . '<meta property="og:title" content="' . $title . '">' . "\n"
-            . '<meta property="og:description" content="' . $description . '">' . "\n";
-
-        if ($shareImage !== '') {
-            $head .= '<meta property="og:image" content="' . $this->e($shareImage) . '">' . "\n";
+        $rawTitle = $shareTitle !== '' ? $shareTitle : $data->title.' - '.$data->coupleLabel();
+        $rawDescription = $shareDescription !== '' ? $shareDescription : trim((string) $data->invitationMessage);
+        if ($rawDescription === '') {
+            $rawDescription = 'Undangan pernikahan digital '.$data->coupleLabel().'. Buka undangan untuk melihat detail acara, lokasi, dan informasi lengkap.';
+        }
+        $rawDescription = preg_replace('/\s+/u', ' ', strip_tags($rawDescription)) ?: $rawDescription;
+        if (mb_strlen($rawDescription) > 160) {
+            $rawDescription = rtrim(mb_substr($rawDescription, 0, 157)).'...';
         }
 
-        if ($shareUrl !== '' && $shareUrl !== '#') {
-            $head .= '<meta property="og:url" content="' . $this->e($shareUrl) . '">' . "\n";
+        $siteName = Setting::get('app_name', config('app.name', 'INVITE'));
+        $canonical = ($shareUrl !== '' && $shareUrl !== '#') ? $this->absoluteUrl($shareUrl) : null;
+        if (! $canonical && ! app()->runningInConsole()) {
+            $canonical = $this->absoluteUrl(request()->url());
+        }
+
+        $fallbackCover = '';
+        foreach ((array) ($data->photoGallery['cover'] ?? []) as $img) {
+            if (is_string($img) && trim($img) !== '') {
+                $fallbackCover = trim($img);
+                break;
+            }
+        }
+        if ($fallbackCover === '') {
+            foreach ((array) ($data->galleries ?? []) as $g) {
+                $u = trim((string) ($g->url ?? ''));
+                if ($u !== '') {
+                    $fallbackCover = $u;
+                    break;
+                }
+            }
+        }
+        $ogImage = $shareImage !== '' ? $this->absoluteUrl($shareImage)
+            : ($fallbackCover !== '' ? $this->absoluteUrl($fallbackCover) : $this->absoluteUrl('/assets/site/img/og-default.png'));
+        $ogImage = $this->optimizeOgImageUrl($ogImage);
+        $ogImageSecure = str_starts_with($ogImage, 'https://') ? $ogImage : (str_starts_with($ogImage, 'http://') ? preg_replace('/^http:\/\//i', 'https://', $ogImage) : $ogImage);
+        $ogImageType = str_ends_with(strtolower(parse_url($ogImage, PHP_URL_PATH) ?? ''), '.png') ? 'image/png'
+            : (str_ends_with(strtolower(parse_url($ogImage, PHP_URL_PATH) ?? ''), '.svg') ? 'image/svg+xml' : 'image/jpeg');
+
+        $isIndexable = ! $data->sample && ! $data->preview;
+        $robots = $isIndexable ? 'index, follow, max-image-preview:large' : 'noindex, nofollow, noarchive';
+
+        $title = $this->e($rawTitle);
+        $description = $this->e($rawDescription);
+        $siteNameEsc = $this->e($siteName);
+
+        $head = '<meta name="viewport" content="width=device-width, initial-scale=1">'."\n"
+            .'<meta name="theme-color" content="#B5935A">'."\n"
+            .'<meta name="robots" content="'.$this->e($robots).'">'."\n"
+            .'<link rel="icon" href="/assets/site/img/favicon.svg" type="image/svg+xml">'."\n"
+            ."<title>{$title}</title>\n"
+            .'<meta name="description" content="'.$description.'">'."\n"
+            .'<meta property="og:type" content="website">'."\n"
+            .'<meta property="og:site_name" content="'.$siteNameEsc.'">'."\n"
+            .'<meta property="og:locale" content="id_ID">'."\n"
+            .'<meta property="og:title" content="'.$title.'">'."\n"
+            .'<meta property="og:description" content="'.$description.'">'."\n"
+            .'<meta property="og:image" content="'.$this->e($ogImage).'">'."\n"
+            .'<meta property="og:image:secure_url" content="'.$this->e($ogImageSecure).'">'."\n"
+            .'<meta property="og:image:type" content="'.$this->e($ogImageType).'">'."\n";
+
+        if ($ogImageType !== 'image/svg+xml') {
+            $head .= '<meta property="og:image:width" content="1200">'."\n"
+                .'<meta property="og:image:height" content="630">'."\n";
+        }
+
+        $head .= '<meta name="twitter:card" content="summary_large_image">'."\n"
+            .'<meta name="twitter:title" content="'.$title.'">'."\n"
+            .'<meta name="twitter:description" content="'.$description.'">'."\n"
+            .'<meta name="twitter:image" content="'.$this->e($ogImage).'">'."\n";
+
+        if ($canonical) {
+            $head .= '<link rel="canonical" href="'.$this->e($canonical).'">'."\n"
+                .'<meta property="og:url" content="'.$this->e($canonical).'">'."\n";
+        }
+
+        $jsonLd = $this->buildJsonLd($data, $rawTitle, $rawDescription, $canonical, $ogImage, $siteName, $isIndexable);
+        if ($jsonLd !== null) {
+            $head .= '<script type="application/ld+json">'.$jsonLd.'</script>'."\n";
         }
 
         $head .= '<style>'
-            . '.ud-honeypot{position:absolute!important;left:-9999px!important;width:1px!important;height:1px!important;overflow:hidden!important}'
-            . '.ud-notice,.ud-toast{position:fixed;left:50%;transform:translateX(-50%);z-index:100001;display:flex;align-items:center;gap:14px;'
-            . 'max-width:calc(100% - 32px);padding:12px 16px;border-radius:14px;background:#fdfbf8;color:#2a2520;'
-            . 'box-shadow:0 16px 44px rgba(43,32,21,.24);border:1px solid #e9dfd2;'
-            . 'font:600 13px/1.5 Jost,system-ui,sans-serif}'
-            . '.ud-notice{top:16px;border-left:4px solid #b5935a}'
-            . '.ud-toast{bottom:84px;border-left:4px solid #2f7d5b}'
-            . '.ud-toast[hidden]{display:none}'
-            . '.ud-notice button,.ud-lightbox-close{border:0;background:rgba(42,37,32,.08);color:#2a2520;'
-            . 'width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:18px;line-height:1}'
-            . '.ud-notice button:hover,.ud-lightbox-close:hover{background:rgba(42,37,32,.16)}'
-            . '.ud-lightbox-close{position:absolute;top:16px;right:16px;width:40px;height:40px;background:#fff;color:#171411;font-size:26px}'
-            . '.ud-lightbox figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:12px;max-width:100%;max-height:100%}'
-            . '.ud-lightbox img{display:block;max-width:100%;max-height:calc(100vh - 72px);object-fit:contain;border-radius:10px}'
-            . '.ud-lightbox figcaption{color:#fff;font:500 13px/1.4 Jost,system-ui,sans-serif;text-align:center}'
-            . '[data-ud-notice] button:focus-visible,.ud-lightbox-close:focus-visible{outline:3px solid #b5935a;outline-offset:3px}'
-            . '@media(max-width:600px){.ud-notice{top:8px}.ud-toast{bottom:72px}.ud-lightbox-close{top:10px;right:10px}}'
-            . '</style>' . "\n";
+            .'.ud-honeypot{position:absolute!important;left:-9999px!important;width:1px!important;height:1px!important;overflow:hidden!important}'
+            .'.ud-notice,.ud-toast{position:fixed;left:50%;transform:translateX(-50%);z-index:100001;display:flex;align-items:center;gap:14px;'
+            .'max-width:calc(100% - 32px);padding:12px 16px;border-radius:14px;background:#fdfbf8;color:#2a2520;'
+            .'box-shadow:0 16px 44px rgba(43,32,21,.24);border:1px solid #e9dfd2;'
+            .'font:600 13px/1.5 Jost,system-ui,sans-serif}'
+            .'.ud-notice{top:16px;border-left:4px solid #b5935a}'
+            .'.ud-toast{bottom:84px;border-left:4px solid #2f7d5b}'
+            .'.ud-toast[hidden]{display:none}'
+            .'.ud-notice button,.ud-lightbox-close{border:0;background:rgba(42,37,32,.08);color:#2a2520;'
+            .'width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:18px;line-height:1}'
+            .'.ud-notice button:hover,.ud-lightbox-close:hover{background:rgba(42,37,32,.16)}'
+            .'.ud-lightbox-close{position:absolute;top:16px;right:16px;width:40px;height:40px;background:#fff;color:#171411;font-size:26px}'
+            .'.ud-lightbox figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:12px;max-width:100%;max-height:100%}'
+            .'.ud-lightbox img{display:block;max-width:100%;max-height:calc(100vh - 72px);object-fit:contain;border-radius:10px}'
+            .'.ud-lightbox figcaption{color:#fff;font:500 13px/1.4 Jost,system-ui,sans-serif;text-align:center}'
+            .'[data-ud-notice] button:focus-visible,.ud-lightbox-close:focus-visible{outline:3px solid #b5935a;outline-offset:3px}'
+            .'@media(max-width:600px){.ud-notice{top:8px}.ud-toast{bottom:72px}.ud-lightbox-close{top:10px;right:10px}}'
+            .'</style>'."\n";
 
         // Template colours, fonts and spacing are authoritative. Customer
         // theme settings never inject global CSS over the original design.
@@ -736,18 +805,18 @@ class HtmlRewriter
         // the same clean invitation.
         $hideCss = $this->hiddenElementCss($html, $hiddenIds, $hiddenWidgets);
         if ($hideCss !== '') {
-            $head .= '<style>' . $hideCss . '</style>' . "\n";
+            $head .= '<style>'.$hideCss.'</style>'."\n";
         }
 
         if ($data->activationPrompt !== null && ($data->activationPrompt['expired'] ?? false) !== true) {
-            $head .= '<style>' . $this->activationGateCss() . '</style>' . "\n";
+            $head .= '<style>'.$this->activationGateCss().'</style>'."\n";
         }
 
         if (str_contains($html, '</head>')) {
-            return str_replace('</head>', $head . '</head>', $html);
+            return str_replace('</head>', $head.'</head>', $html);
         }
 
-        return preg_replace('~<html[^>]*>~i', '$0<head>' . $head . '</head>', $html, 1) ?? $html;
+        return preg_replace('~<html[^>]*>~i', '$0<head>'.$head.'</head>', $html, 1) ?? $html;
     }
 
     private function injectRuntime(string $html, InvitationViewData $data, array $hiddenIds, array $hiddenWidgets = []): string
@@ -756,10 +825,10 @@ class HtmlRewriter
         $share = (! $data->sample && ! $data->preview && $publicUrl !== '' && $publicUrl !== '#')
             ? [
                 'url' => $publicUrl,
-                'whatsapp' => 'https://wa.me/?text=' . rawurlencode($data->title . ' — ' . $publicUrl),
-                'facebook' => 'https://www.facebook.com/sharer/sharer.php?u=' . rawurlencode($publicUrl),
-                'telegram' => 'https://t.me/share/url?url=' . rawurlencode($publicUrl)
-                    . '&text=' . rawurlencode($data->title),
+                'whatsapp' => 'https://wa.me/?text='.rawurlencode($data->title.' — '.$publicUrl),
+                'facebook' => 'https://www.facebook.com/sharer/sharer.php?u='.rawurlencode($publicUrl),
+                'telegram' => 'https://t.me/share/url?url='.rawurlencode($publicUrl)
+                    .'&text='.rawurlencode($data->title),
             ]
             : null;
 
@@ -790,64 +859,64 @@ class HtmlRewriter
 
         if (! $data->sample && ! $data->preview && $data->publicStatus !== null && trim($data->publicStatus) !== '') {
             $notice = '<div class="ud-notice" data-ud-notice role="status" aria-live="polite">'
-                . '<span>' . $this->e($data->publicStatus) . '</span>'
-                . '<button type="button" data-ud-notice-close aria-label="Tutup pesan">×</button>'
-                . '</div>';
+                .'<span>'.$this->e($data->publicStatus).'</span>'
+                .'<button type="button" data-ud-notice-close aria-label="Tutup pesan">×</button>'
+                .'</div>';
 
             $html = str_contains($html, '</body>')
-                ? str_replace('</body>', $notice . '</body>', $html)
-                : $html . $notice;
+                ? str_replace('</body>', $notice.'</body>', $html)
+                : $html.$notice;
         }
 
         if ($data->activationPrompt !== null && ($data->activationPrompt['expired'] ?? false) !== true) {
             $gate = $this->activationGateMarkup($data->activationPrompt);
 
             $html = str_contains($html, '</body>')
-                ? str_replace('</body>', $gate . '</body>', $html)
-                : $html . $gate;
+                ? str_replace('</body>', $gate.'</body>', $html)
+                : $html.$gate;
         }
 
         $json = json_encode($config, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
-        $script = '<script>window.UD_CONFIG=' . $json . ';' . $this->runtimeScript() . '</script>';
+        $script = '<script>window.UD_CONFIG='.$json.';'.$this->runtimeScript().'</script>';
 
         if (str_contains($html, '</body>')) {
-            return str_replace('</body>', $script . '</body>', $html);
+            return str_replace('</body>', $script.'</body>', $html);
         }
 
-        return $html . $script;
+        return $html.$script;
     }
 
     private function activationGateCss(): string
     {
         return '.ud-activation-backdrop{position:fixed;inset:0;z-index:100002;display:flex;align-items:center;'
-            . 'justify-content:center;padding:20px;background:rgba(23,20,17,.62);backdrop-filter:blur(5px)}'
-            . 'body.ud-activation-open{overflow:hidden}'
-            . 'body.ud-activation-locked > *:not([data-ud-activation-gate]){display:none!important}'
-            . '.ud-activation-card{position:relative;width:min(520px,100%);max-height:calc(100vh - 40px);overflow:auto;'
-            . 'padding:30px;border:1px solid #e9dfd2;border-radius:20px;background:#fdfbf8;color:#2a2520;'
-            . 'box-shadow:0 28px 80px rgba(23,20,17,.32);font:500 14px/1.65 Jost,system-ui,sans-serif}'
-            . '.ud-activation-kicker{display:block;color:#8a6b3d;font:700 11px/1.4 Jost,system-ui,sans-serif;'
-            . 'letter-spacing:.16em;text-transform:uppercase}'
-            . '.ud-activation-card h2{margin:8px 0 10px;color:#2a2520;font:600 1.75rem/1.2 Georgia,serif}'
-            . '.ud-activation-card p{margin:0;color:#6b6258;line-height:1.7}'
-            . '.ud-activation-close{position:absolute;top:14px;right:16px;width:34px;height:34px;border:0;border-radius:50%;'
-            . 'background:rgba(42,37,32,.08);color:#2a2520;cursor:pointer;font-size:20px;line-height:1}'
-            . '.ud-activation-close:hover{background:rgba(42,37,32,.16)}'
-            . '.ud-activation-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:20px 0 22px;'
-            . 'padding:14px 16px;border-radius:12px;background:#f4ede3;color:#6b6258;font-size:12px}'
-            . '.ud-activation-meta strong{display:block;margin-top:4px;color:#2a2520;font:700 15px/1.3 Jost,system-ui,sans-serif}'
-            . '.ud-activation-actions{display:flex;flex-wrap:wrap;gap:10px}'
-            . '.ud-activation-actions a,.ud-activation-actions button{flex:1 1 180px;display:inline-flex;align-items:center;'
-            . 'justify-content:center;min-height:44px;padding:10px 16px;border-radius:10px;text-decoration:none;'
-            . 'font:700 13px/1.2 Jost,system-ui,sans-serif;cursor:pointer}'
-            . '.ud-activation-primary{border:1px solid #8a6b3d;background:#8a6b3d;color:#fff}'
-            . '.ud-activation-primary:hover{border-color:#6f5430;background:#6f5430}'
-            . '.ud-activation-secondary{border:1px solid #d8ccbd;background:transparent;color:#2a2520}'
-            . '.ud-activation-secondary:hover{background:rgba(42,37,32,.06)}'
-            . '.ud-activation-backdrop :focus-visible{outline:3px solid #b5935a;outline-offset:3px}'
-            . '@media(max-width:600px){.ud-activation-backdrop{padding:12px}.ud-activation-card{padding:24px 20px}'
-            . '.ud-activation-card h2{font-size:1.45rem}.ud-activation-meta{grid-template-columns:1fr}}'
-            . '@media(prefers-reduced-motion:reduce){.ud-activation-card{scroll-behavior:auto}}';
+            .'justify-content:center;padding:20px;background:rgba(23,20,17,.62);backdrop-filter:blur(5px)}'
+            .'body.ud-activation-open{overflow:hidden}'
+            .'body.ud-activation-locked > *:not([data-ud-activation-gate]){display:none!important}'
+            .'.ud-activation-card{position:relative;width:min(520px,100%);max-height:calc(100vh - 40px);overflow:auto;'
+            .'padding:30px;border:1px solid #e9dfd2;border-radius:20px;background:#fdfbf8;color:#2a2520;'
+            .'box-shadow:0 28px 80px rgba(23,20,17,.32);font:500 14px/1.65 Jost,system-ui,sans-serif}'
+            .'.ud-activation-kicker{display:block;color:#8a6b3d;font:700 11px/1.4 Jost,system-ui,sans-serif;'
+            .'letter-spacing:.16em;text-transform:uppercase}'
+            .'.ud-activation-card h2{margin:8px 0 10px;color:#2a2520;font:600 1.75rem/1.2 Georgia,serif}'
+            .'.ud-activation-card p{margin:0;color:#6b6258;line-height:1.7}'
+            .'.ud-activation-close{position:absolute;top:14px;right:16px;width:34px;height:34px;border:0;border-radius:50%;'
+            .'background:rgba(42,37,32,.08);color:#2a2520;cursor:pointer;font-size:20px;line-height:1}'
+            .'.ud-activation-close:hover{background:rgba(42,37,32,.16)}'
+            .'.ud-activation-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:20px 0 22px;'
+            .'padding:14px 16px;border-radius:12px;background:#f4ede3;color:#6b6258;font-size:12px}'
+            .'.ud-activation-meta strong{display:block;margin-top:4px;color:#2a2520;font:700 15px/1.3 Jost,system-ui,sans-serif}'
+            .'.ud-activation-actions{display:flex;flex-wrap:wrap;gap:10px}'
+            .'.ud-activation-actions a,.ud-activation-actions button{flex:1 1 180px;display:inline-flex;align-items:center;'
+            .'justify-content:center;min-height:44px;padding:10px 16px;border-radius:10px;text-decoration:none;'
+            .'font:700 13px/1.2 Jost,system-ui,sans-serif;cursor:pointer}'
+            .'.ud-activation-primary{border:1px solid #8a6b3d;background:#8a6b3d;color:#fff}'
+            .'.ud-activation-primary:hover{border-color:#6f5430;background:#6f5430}'
+            .'.ud-activation-secondary{border:1px solid #d8ccbd;background:transparent;color:#2a2520}'
+            .'.ud-activation-secondary:hover{background:rgba(42,37,32,.06)}'
+            .'.ud-activation-backdrop :focus-visible{outline:3px solid #b5935a;outline-offset:3px}'
+            .'@media(max-width:600px){.ud-activation-backdrop{padding:12px}.ud-activation-card{padding:24px 20px}'
+            .'.ud-activation-card h2{font-size:1.45rem}.ud-activation-meta{grid-template-columns:1fr}}'
+            .'@media(prefers-reduced-motion:reduce){.ud-activation-card{scroll-behavior:auto}}';
     }
 
     /** @param  array<string, mixed>  $prompt */
@@ -862,25 +931,25 @@ class HtmlRewriter
         $activationUrl = $this->e((string) ($prompt['activation_url'] ?? '#'));
 
         return '<div class="ud-activation-backdrop" data-ud-activation-gate'
-            . ' data-remaining-seconds="' . $this->e($remainingSeconds) . '"'
-            . ' data-expired-message="' . $expiredMessage . '"'
-            . ' role="dialog" aria-modal="true" aria-labelledby="ud-activation-title"'
-            . ' aria-describedby="ud-activation-message">'
-            . '<div class="ud-activation-card">'
-            . '<button type="button" class="ud-activation-close" data-ud-activation-close aria-label="Tutup pengingat">&times;</button>'
-            . '<span class="ud-activation-kicker">Undangan Anda</span>'
-            . '<h2 id="ud-activation-title">' . $title . '</h2>'
-            . '<p id="ud-activation-message" data-ud-activation-message>' . $message . '</p>'
-            . '<div class="ud-activation-meta">'
-            . '<span>Sisa waktu preview<strong data-ud-activation-status><span data-ud-activation-remaining>' . $remainingLabel . '</span></strong></span>'
-            . '<span>Harga aktivasi<strong>' . $price . '</strong></span>'
-            . '</div>'
-            . '<div class="ud-activation-actions">'
-            . '<a class="ud-activation-primary" href="' . $activationUrl . '">Aktifkan Sekarang</a>'
-            . '<button type="button" class="ud-activation-secondary" data-ud-activation-close>Nanti Saja</button>'
-            . '</div>'
-            . '</div>'
-            . '</div>';
+            .' data-remaining-seconds="'.$this->e($remainingSeconds).'"'
+            .' data-expired-message="'.$expiredMessage.'"'
+            .' role="dialog" aria-modal="true" aria-labelledby="ud-activation-title"'
+            .' aria-describedby="ud-activation-message">'
+            .'<div class="ud-activation-card">'
+            .'<button type="button" class="ud-activation-close" data-ud-activation-close aria-label="Tutup pengingat">&times;</button>'
+            .'<span class="ud-activation-kicker">Undangan Anda</span>'
+            .'<h2 id="ud-activation-title">'.$title.'</h2>'
+            .'<p id="ud-activation-message" data-ud-activation-message>'.$message.'</p>'
+            .'<div class="ud-activation-meta">'
+            .'<span>Sisa waktu preview<strong data-ud-activation-status><span data-ud-activation-remaining>'.$remainingLabel.'</span></strong></span>'
+            .'<span>Harga aktivasi<strong>'.$price.'</strong></span>'
+            .'</div>'
+            .'<div class="ud-activation-actions">'
+            .'<a class="ud-activation-primary" href="'.$activationUrl.'">Aktifkan Sekarang</a>'
+            .'<button type="button" class="ud-activation-secondary" data-ud-activation-close>Nanti Saja</button>'
+            .'</div>'
+            .'</div>'
+            .'</div>';
     }
 
     private function activationExpiredPage(InvitationViewData $data): string
@@ -893,51 +962,51 @@ class HtmlRewriter
         $dashboardUrl = $this->e((string) ($prompt['dashboard_url'] ?? route('dashboard')));
 
         return '<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">'
-            . '<meta name="viewport" content="width=device-width, initial-scale=1">'
-            . '<meta name="theme-color" content="#B5935A">'
-            . '<link rel="icon" href="/assets/site/img/favicon.svg" type="image/svg+xml">'
-            . '<title>Aktivasi Diperlukan — ' . $this->e($data->title) . '</title>'
-            . '<style>'
-            . '*{box-sizing:border-box}html,body{min-height:100%}body{margin:0;background:#171411;color:#2a2520;'
-            . 'font:500 15px/1.7 Jost,system-ui,sans-serif}'
-            . '.ud-gate{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;'
-            . 'background:radial-gradient(circle at 50% 0%,#4a4035 0%,#171411 62%)}'
-            . '.ud-gate-card{width:min(540px,100%);padding:36px;border:1px solid #e9dfd2;border-radius:22px;'
-            . 'background:#fdfbf8;box-shadow:0 32px 90px rgba(0,0,0,.45);text-align:center}'
-            . '.ud-gate-kicker{display:block;color:#8a6b3d;font:700 11px/1.4 Jost,system-ui,sans-serif;'
-            . 'letter-spacing:.18em;text-transform:uppercase}'
-            . '.ud-gate-card h1{margin:10px 0 12px;color:#2a2520;font:600 2rem/1.18 Georgia,serif}'
-            . '.ud-gate-card p{margin:0;color:#6b6258}'
-            . '.ud-gate-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:24px 0;'
-            . 'padding:16px;border-radius:14px;background:#f4ede3;color:#6b6258;font-size:12px}'
-            . '.ud-gate-meta strong{display:block;margin-top:5px;color:#2a2520;font:700 16px/1.3 Jost,system-ui,sans-serif}'
-            . '.ud-gate-actions{display:flex;flex-wrap:wrap;gap:10px}'
-            . '.ud-gate-actions a{flex:1 1 190px;display:inline-flex;align-items:center;justify-content:center;'
-            . 'min-height:46px;padding:11px 16px;border-radius:10px;text-decoration:none;'
-            . 'font:700 13px/1.2 Jost,system-ui,sans-serif}'
-            . '.ud-gate-primary{border:1px solid #8a6b3d;background:#8a6b3d;color:#fff}'
-            . '.ud-gate-secondary{border:1px solid #d8ccbd;background:transparent;color:#2a2520}'
-            . '.ud-gate-card a:focus-visible{outline:3px solid #b5935a;outline-offset:3px}'
-            . '@media(max-width:600px){.ud-gate{padding:12px}.ud-gate-card{padding:26px 20px}'
-            . '.ud-gate-card h1{font-size:1.55rem}.ud-gate-meta{grid-template-columns:1fr}}'
-            . '</style></head><body>'
-            . '<main class="ud-gate" data-ud-activation-gate data-ud-expired'
-            . ' role="dialog" aria-modal="true" aria-labelledby="ud-gate-title" aria-describedby="ud-gate-message">'
-            . '<div class="ud-gate-card">'
-            . '<span class="ud-gate-kicker">Undangan Digital</span>'
-            . '<h1 id="ud-gate-title">' . $title . '</h1>'
-            . '<p id="ud-gate-message">' . $message . '</p>'
-            . '<div class="ud-gate-meta">'
-            . '<span>Status<strong>Masa pratinjau habis</strong></span>'
-            . '<span>Biaya aktivasi<strong>' . $price . '</strong></span>'
-            . '</div>'
-            . '<div class="ud-gate-actions">'
-            . '<a class="ud-gate-primary" href="' . $activationUrl . '">Aktifkan Sekarang</a>'
-            . '<a class="ud-gate-secondary" href="' . $dashboardUrl . '">Kembali ke Dashboard</a>'
-            . '</div>'
-            . '</div>'
-            . '</main>'
-            . '</body></html>';
+            .'<meta name="viewport" content="width=device-width, initial-scale=1">'
+            .'<meta name="theme-color" content="#B5935A">'
+            .'<link rel="icon" href="/assets/site/img/favicon.svg" type="image/svg+xml">'
+            .'<title>Aktivasi Diperlukan — '.$this->e($data->title).'</title>'
+            .'<style>'
+            .'*{box-sizing:border-box}html,body{min-height:100%}body{margin:0;background:#171411;color:#2a2520;'
+            .'font:500 15px/1.7 Jost,system-ui,sans-serif}'
+            .'.ud-gate{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;'
+            .'background:radial-gradient(circle at 50% 0%,#4a4035 0%,#171411 62%)}'
+            .'.ud-gate-card{width:min(540px,100%);padding:36px;border:1px solid #e9dfd2;border-radius:22px;'
+            .'background:#fdfbf8;box-shadow:0 32px 90px rgba(0,0,0,.45);text-align:center}'
+            .'.ud-gate-kicker{display:block;color:#8a6b3d;font:700 11px/1.4 Jost,system-ui,sans-serif;'
+            .'letter-spacing:.18em;text-transform:uppercase}'
+            .'.ud-gate-card h1{margin:10px 0 12px;color:#2a2520;font:600 2rem/1.18 Georgia,serif}'
+            .'.ud-gate-card p{margin:0;color:#6b6258}'
+            .'.ud-gate-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:24px 0;'
+            .'padding:16px;border-radius:14px;background:#f4ede3;color:#6b6258;font-size:12px}'
+            .'.ud-gate-meta strong{display:block;margin-top:5px;color:#2a2520;font:700 16px/1.3 Jost,system-ui,sans-serif}'
+            .'.ud-gate-actions{display:flex;flex-wrap:wrap;gap:10px}'
+            .'.ud-gate-actions a{flex:1 1 190px;display:inline-flex;align-items:center;justify-content:center;'
+            .'min-height:46px;padding:11px 16px;border-radius:10px;text-decoration:none;'
+            .'font:700 13px/1.2 Jost,system-ui,sans-serif}'
+            .'.ud-gate-primary{border:1px solid #8a6b3d;background:#8a6b3d;color:#fff}'
+            .'.ud-gate-secondary{border:1px solid #d8ccbd;background:transparent;color:#2a2520}'
+            .'.ud-gate-card a:focus-visible{outline:3px solid #b5935a;outline-offset:3px}'
+            .'@media(max-width:600px){.ud-gate{padding:12px}.ud-gate-card{padding:26px 20px}'
+            .'.ud-gate-card h1{font-size:1.55rem}.ud-gate-meta{grid-template-columns:1fr}}'
+            .'</style></head><body>'
+            .'<main class="ud-gate" data-ud-activation-gate data-ud-expired'
+            .' role="dialog" aria-modal="true" aria-labelledby="ud-gate-title" aria-describedby="ud-gate-message">'
+            .'<div class="ud-gate-card">'
+            .'<span class="ud-gate-kicker">Undangan Digital</span>'
+            .'<h1 id="ud-gate-title">'.$title.'</h1>'
+            .'<p id="ud-gate-message">'.$message.'</p>'
+            .'<div class="ud-gate-meta">'
+            .'<span>Status<strong>Masa pratinjau habis</strong></span>'
+            .'<span>Biaya aktivasi<strong>'.$price.'</strong></span>'
+            .'</div>'
+            .'<div class="ud-gate-actions">'
+            .'<a class="ud-gate-primary" href="'.$activationUrl.'">Aktifkan Sekarang</a>'
+            .'<a class="ud-gate-secondary" href="'.$dashboardUrl.'">Kembali ke Dashboard</a>'
+            .'</div>'
+            .'</div>'
+            .'</main>'
+            .'</body></html>';
     }
 
     private function runtimeScript(): string
@@ -1266,7 +1335,7 @@ JS;
      */
     private function elementBoundsByDataId(string $html, string $dataId): ?array
     {
-        $position = strpos($html, 'data-id="' . $dataId . '"');
+        $position = strpos($html, 'data-id="'.$dataId.'"');
 
         if ($position === false) {
             return null;
@@ -1277,7 +1346,7 @@ JS;
         $tag = null;
 
         foreach (['section', 'div'] as $candidate) {
-            $candidateStart = strrpos($prefix, '<' . $candidate);
+            $candidateStart = strrpos($prefix, '<'.$candidate);
             if ($candidateStart !== false && ($start === null || $candidateStart > $start)) {
                 $start = $candidateStart;
                 $tag = $candidate;
@@ -1311,10 +1380,10 @@ JS;
 
     private function matchingTagClose(string $html, int $start, string $tag): ?int
     {
-        $pattern = '~</?' . preg_quote($tag, '~') . '\b~i';
+        $pattern = '~</?'.preg_quote($tag, '~').'\b~i';
         $depth = 1;
         $position = $start;
-        $closing = '</' . $tag;
+        $closing = '</'.$tag;
 
         while (preg_match($pattern, $html, $matches, PREG_OFFSET_CAPTURE, $position)) {
             $tagStart = $matches[0][1];
@@ -1334,7 +1403,7 @@ JS;
      */
     private function widgetBounds(string $html, string $dataId): ?array
     {
-        $position = strpos($html, 'data-id="' . $dataId . '"');
+        $position = strpos($html, 'data-id="'.$dataId.'"');
 
         if ($position === false) {
             return null;
@@ -1420,16 +1489,17 @@ JS;
         }
 
         if (preg_match('~\sstyle="([^"]*)"~i', $tag, $matches)) {
-            $updated = str_replace($matches[0], ' style="' . $matches[1] . ';' . $declaration . '"', $tag);
+            $updated = str_replace($matches[0], ' style="'.$matches[1].';'.$declaration.'"', $tag);
         } else {
-            $updated = rtrim($tag) . ' style="' . $declaration . '"';
+            $updated = rtrim($tag).' style="'.$declaration.'"';
         }
 
         return substr_replace($html, $updated, $start, $end - $start);
     }
 
     private function removeDivById(string $html, string $id): string
-    {        $position = strpos($html, 'id="' . $id . '"');
+    {
+        $position = strpos($html, 'id="'.$id.'"');
 
         if ($position === false) {
             return $html;
@@ -1495,7 +1565,7 @@ JS;
             }
 
             $sectionId = $safeId;
-            $position = strpos($html, 'data-id="' . $id . '"');
+            $position = strpos($html, 'data-id="'.$id.'"');
 
             if ($position !== false) {
                 foreach ($sections as $section) {
@@ -1507,16 +1577,132 @@ JS;
                 }
             }
 
-            $selectors['[data-id="' . $sectionId . '"]'] = true;
+            $selectors['[data-id="'.$sectionId.'"]'] = true;
         }
 
         foreach ($hiddenWidgets as $id) {
             $safeId = preg_replace('/[^a-zA-Z0-9_-]/', '', $id) ?? '';
             if ($safeId !== '') {
-                $selectors['[data-id="' . $safeId . '"]'] = true;
+                $selectors['[data-id="'.$safeId.'"]'] = true;
             }
         }
 
-        return $selectors === [] ? '' : implode(',', array_keys($selectors)) . '{display:none!important}';
+        return $selectors === [] ? '' : implode(',', array_keys($selectors)).'{display:none!important}';
+    }
+
+    private function absoluteUrl(string $path): string
+    {
+        if ($path === '' || $path === '#') {
+            return $path;
+        }
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+        if (str_starts_with($path, '//')) {
+            return 'https:'.$path;
+        }
+
+        return url($path);
+    }
+
+    private function optimizeOgImageUrl(string $url): string
+    {
+        if ($url === '' || str_contains($url, '/assets/site/img/og-default')) {
+            return $url;
+        }
+        // Cloudinary delivery URL: add OG-friendly crop/size transform.
+        if (preg_match('~https?://res\.cloudinary\.com/[^/]+/image/upload/(.+)$~i', $url, $m)) {
+            $rest = $m[1];
+            if (str_contains($rest, 'c_fill') || str_contains($rest, 'w_1200')) {
+                return $url;
+            }
+
+            return preg_replace('~/image/upload/~i', '/image/upload/c_fill,g_auto,w_1200,h_630,f_jpg,q_auto/', $url, 1) ?? $url;
+        }
+
+        return $url;
+    }
+
+    private function buildJsonLd(InvitationViewData $data, string $title, string $description, ?string $canonical, string $image, string $siteName, bool $isIndexable): ?string
+    {
+        $graph = [];
+        $websiteId = rtrim((string) config('app.url', url('/')), '/').'#website';
+        $pageId = ($canonical ?: url('/')).'#webpage';
+
+        $graph[] = [
+            '@type' => 'WebSite',
+            '@id' => $websiteId,
+            'url' => rtrim((string) config('app.url', url('/')), '/'),
+            'name' => $siteName,
+            'inLanguage' => 'id-ID',
+        ];
+
+        $graph[] = [
+            '@type' => 'WebPage',
+            '@id' => $pageId,
+            'url' => $canonical ?: url()->current(),
+            'name' => $title,
+            'description' => $description,
+            'isPartOf' => ['@id' => $websiteId],
+            'inLanguage' => 'id-ID',
+            'primaryImageOfPage' => $image,
+        ];
+
+        foreach ($data->events as $event) {
+            $start = trim((string) $event->date);
+            $time = '';
+            if (preg_match('/(\d{2}:\d{2})/', (string) $event->timeLabel, $m)) {
+                $time = $m[1];
+            }
+            $tz = trim((string) ($event->timezone ?? 'Asia/Jakarta')) ?: 'Asia/Jakarta';
+            $startIso = null;
+            if ($start !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $start)) {
+                try {
+                    $startIso = Carbon::parse($start.' '.($time !== '' ? $time : '00:00'), $tz)->toIso8601String();
+                } catch (\Throwable $e) {
+                    $startIso = null;
+                }
+            }
+
+            $eventNode = [
+                '@type' => 'Event',
+                'name' => trim((string) $event->title) !== '' ? $event->title : $title,
+                'description' => $description,
+                'eventAttendanceMode' => 'https://schema.org/OfflineEventAttendanceMode',
+                'eventStatus' => 'https://schema.org/EventScheduled',
+                'image' => $image,
+                'url' => $canonical ?: url()->current(),
+                'inLanguage' => 'id-ID',
+            ];
+            if ($startIso) {
+                $eventNode['startDate'] = $startIso;
+            }
+            $address = trim((string) ($event->address ?? ''));
+            $locationLabel = trim((string) ($event->locationLabel ?? ''));
+            $locationName = $locationLabel;
+            if ($address !== '' && $locationName !== '') {
+                $locationName = trim(str_replace($address, '', $locationName));
+            }
+            $locationName = trim($locationName, " 
+	 ,-");
+            if ($locationName === '') {
+                $locationName = $address !== '' ? $address : $locationLabel;
+            }
+            if ($locationName !== '' || $address !== '') {
+                $eventNode['location'] = [
+                    '@type' => 'Place',
+                    'name' => $locationName !== '' ? $locationName : $address,
+                    'address' => $address !== '' ? $address : $locationName,
+                ];
+            }
+            $graph[] = $eventNode;
+        }
+
+        $payload = [
+            '@context' => 'https://schema.org',
+            '@graph' => $graph,
+        ];
+
+        return json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: null;
     }
 }

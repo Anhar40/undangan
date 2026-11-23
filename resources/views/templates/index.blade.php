@@ -1,6 +1,7 @@
 @extends(auth()->check() ? 'layouts.customer' : 'layouts.app')
 
 @section('title', 'Katalog Template — ' . config('app.name'))
+@section('meta_description', 'Jelajahi katalog template undangan digital INVITE dan pilih desain terbaik untuk hari istimewa Anda.')
 @section('customer_section', 'Katalog Template')
 
 @section('content')

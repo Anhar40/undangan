@@ -1,6 +1,8 @@
 @extends('layouts.app')
 
 @section('title', 'Bagikan Undangan — ' . config('app.name'))
+@section('meta_robots', 'noindex, nofollow')
+@section('meta_description', 'Bagikan tautan undangan digital Anda dengan pesan yang rapi dan personal.')
 
 @section('content')
 @php

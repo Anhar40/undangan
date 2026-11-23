@@ -19,9 +19,11 @@ use App\Http\Controllers\Public\GuestResponseController;
 use App\Http\Controllers\Public\InvitationController as PublicInvitationController;
 use App\Http\Controllers\Site\HomeController;
 use App\Http\Controllers\Site\ShareController;
+use App\Http\Controllers\Site\SitemapController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [GoogleAuthController::class, 'showLogin'])->name('login');

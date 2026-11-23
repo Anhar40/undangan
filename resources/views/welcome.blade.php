@@ -1,6 +1,23 @@
 @extends('layouts.app')
 
 @section('title', 'Undangan Digital Pernikahan — ' . config('app.name'))
+@section('meta_description', 'INVITE membantu Anda membuat undangan digital pernikahan yang elegan, personal, dan mudah dibagikan.')
+
+@push('head_meta')
+@php
+$site = \App\Models\Setting::get('app_name', config('app.name','INVITE'));
+$base = rtrim((string) config('app.url', url('/')), '/');
+$ld = [
+  '@context'=>'https://schema.org',
+  '@graph'=>[
+    ['@type'=>'Organization','@id'=>$base.'#organization','name'=>$site,'url'=>$base,'logo'=>asset('assets/site/img/brand-mark.svg')],
+    ['@type'=>'WebSite','@id'=>$base.'#website','url'=>$base,'name'=>$site,'publisher'=>['@id'=>$base.'#organization'],'inLanguage'=>'id-ID'],
+    ['@type'=>'WebPage','@id'=>$base.'#webpage','url'=>$base.'/','name'=>'Undangan Digital Pernikahan - '.$site,'isPartOf'=>['@id'=>$base.'#website'],'about'=>['@id'=>$base.'#organization'],'inLanguage'=>'id-ID']
+  ]
+];
+@endphp
+<script type="application/ld+json">{!! json_encode($ld, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) !!}</script>
+@endpush
 
 @php
     $berandaAsset = fn (string $file): string => asset('assets/beranda/' . rawurlencode($file));

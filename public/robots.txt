@@ -1,2 +1,16 @@
-User-agent: *
-Disallow:
+﻿User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /login
+Disallow: /logout
+Disallow: /auth/
+Disallow: /invitations
+Disallow: /transactions
+Disallow: /payment/
+Disallow: /templates/*/select
+Disallow: /share
+Disallow: /api/
+Disallow: /storage/
+
+Sitemap: https://undangan233.vercel.app/sitemap.xml

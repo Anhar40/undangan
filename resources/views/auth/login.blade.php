@@ -1,6 +1,8 @@
 @extends('layouts.app')
 
 @section('title', 'Masuk — ' . config('app.name'))
+@section('meta_robots', 'noindex, nofollow')
+@section('meta_description', 'Masuk ke INVITE untuk membuat dan mengelola undangan digital pernikahan Anda.')
 
 @section('content')
 <div class="container">
