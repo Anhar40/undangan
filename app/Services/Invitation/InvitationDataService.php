@@ -14,6 +14,7 @@ use App\Enums\CoupleOrder;
 use App\Models\Invitation;
 use App\Models\Template;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 class InvitationDataService
 {
@@ -542,21 +543,49 @@ class InvitationDataService
             return $cache[$path];
         }
 
+        $remote = str_starts_with($path, 'http://') || str_starts_with($path, 'https://');
+        $cacheKey = $remote ? 'gallery_dims:'.sha1($path) : null;
+
+        if ($cacheKey) {
+            $cached = Cache::get($cacheKey);
+            if (is_array($cached) && ($cached[0] ?? 0) > 0 && ($cached[1] ?? 0) > 0) {
+                return $cache[$path] = [(int) $cached[0], (int) $cached[1]];
+            }
+        }
+
         $candidate = $path;
-        if (! str_starts_with($path, 'http://') && ! str_starts_with($path, 'https://')) {
+        if (! $remote) {
             $localPublic = storage_path('app/public/'.ltrim($path, '/'));
             $candidate = is_file($localPublic) ? $localPublic : $path;
         }
 
-        if (is_file($candidate) || str_starts_with($candidate, 'http://') || str_starts_with($candidate, 'https://')) {
-            $size = @getimagesize($candidate);
+        if (is_file($candidate) || $remote) {
+            $size = false;
+            if ($remote) {
+                // Avoid blocking render on slow remote image metadata fetches.
+                $context = stream_context_create(['http' => ['timeout' => 2.5, 'ignore_errors' => true], 'https' => ['timeout' => 2.5, 'ignore_errors' => true]]);
+                $size = @getimagesize($candidate, $info, $context);
+            } else {
+                $size = @getimagesize($candidate);
+            }
 
             if (is_array($size) && ($size[0] ?? 0) > 0 && ($size[1] ?? 0) > 0) {
-                return $cache[$path] = [(int) $size[0], (int) $size[1]];
+                $dims = [(int) $size[0], (int) $size[1]];
+                if ($cacheKey) {
+                    Cache::put($cacheKey, $dims, now()->addDays(30));
+                }
+
+                return $cache[$path] = $dims;
             }
         }
 
-        return $cache[$path] = [853, 1280];
+        $fallback = [853, 1280];
+        if ($cacheKey) {
+            // Cache fallback briefly to avoid repeated slow remote probes.
+            Cache::put($cacheKey, $fallback, now()->addMinutes(30));
+        }
+
+        return $cache[$path] = $fallback;
     }
 
     private function timezoneLabel(string $timezone): string

@@ -67,9 +67,31 @@ class TemplateSnapshotService
         $path = $snapshot['path'] ?? null;
 
         if (is_string($path) && (str_starts_with($path, 'http://') || str_starts_with($path, 'https://'))) {
-            $response = Http::timeout(20)->get($path);
+            $tmpDir = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR.'invite-template-snapshots';
+            $tmpFile = $tmpDir.DIRECTORY_SEPARATOR.sha1($path).'.html';
+            if (is_file($tmpFile)) {
+                $cached = @file_get_contents($tmpFile);
+                if (is_string($cached) && $cached !== '') {
+                    return $cached;
+                }
+            }
+
+            $response = Http::timeout(15)->connectTimeout(5)->get($path);
             if ($response->successful()) {
-                return (string) $response->body();
+                $html = (string) $response->body();
+                if (! is_dir($tmpDir)) {
+                    @mkdir($tmpDir, 0777, true);
+                }
+                @file_put_contents($tmpFile, $html, LOCK_EX);
+
+                return $html;
+            }
+
+            if (is_file($tmpFile)) {
+                $cached = @file_get_contents($tmpFile);
+                if (is_string($cached) && $cached !== '') {
+                    return $cached;
+                }
             }
         }
 
