@@ -16,8 +16,7 @@ class InvitationCreationService
     public function __construct(
         private readonly TemplateSnapshotService $snapshots,
         private readonly WeddingQuoteService $quotes,
-    ) {
-    }
+    ) {}
 
     /**
      * Create a draft from an active template and freeze everything the renderer
@@ -43,7 +42,7 @@ class InvitationCreationService
                 'template_version' => $template->version,
                 'template_path' => $template->template_path,
                 'template_snapshot' => $snapshot,
-                'title' => 'Undangan Pernikahan ' . $user->name,
+                'title' => 'Undangan Pernikahan '.$user->name,
                 'slug' => $this->uniqueSlug($template),
                 'status' => InvitationStatus::Draft,
                 'payment_status' => PaymentStatus::Pending,
@@ -72,7 +71,7 @@ class InvitationCreationService
         $base = Str::slug($template->name ?: 'undangan') ?: 'undangan';
 
         do {
-            $slug = $base . '-' . strtolower(Str::random(8));
+            $slug = $base.'-'.strtolower(Str::random(8));
         } while (Invitation::withTrashed()->where('slug', $slug)->exists());
 
         return $slug;

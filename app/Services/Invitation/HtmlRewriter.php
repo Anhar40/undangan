@@ -1167,7 +1167,7 @@ class HtmlRewriter
         openButton.addEventListener('click', function () {
             document.body.style.overflowY = '';
             openButton.style.visibility = 'hidden';
-            if (config.audio && config.audio.autoplay) playMusic();
+            if (musicEnabled && audio) playMusic();
         });
     }
 
@@ -1683,8 +1683,8 @@ JS;
             if ($address !== '' && $locationName !== '') {
                 $locationName = trim(str_replace($address, '', $locationName));
             }
-            $locationName = trim($locationName, " 
-	 ,-");
+            $locationName = trim($locationName, ' 
+	 ,-');
             if ($locationName === '') {
                 $locationName = $address !== '' ? $address : $locationLabel;
             }

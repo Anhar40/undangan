@@ -12,6 +12,7 @@ use App\Data\StoryViewData;
 use App\Enums\AttendanceStatus;
 use App\Enums\CoupleOrder;
 use App\Models\Invitation;
+use App\Models\Music;
 use App\Models\Template;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -43,6 +44,18 @@ class InvitationDataService
         $guestName = trim($guestName ?: '');
         $galleries = array_slice($sample['galleries'], 0, self::MAX_GALLERY_PHOTOS);
 
+        $dbMusicUrl = Music::query()->where('status', 'active')->orderBy('id')->value('file_path');
+        if (is_string($dbMusicUrl) && $dbMusicUrl !== '') {
+            $dbMusicUrl = str_starts_with($dbMusicUrl, 'http') ? $dbMusicUrl : asset('storage/'.ltrim($dbMusicUrl, '/'));
+        } else {
+            $dbMusicUrl = $sample['musicUrl'];
+        }
+
+        $features = $template->features();
+        if ($dbMusicUrl) {
+            $features['music'] = true;
+        }
+
         return new InvitationViewData(
             key: $key,
             templateName: $template->name,
@@ -61,9 +74,9 @@ class InvitationDataService
             giftAddress: $sample['giftAddress'] ?? null,
             families: $sample['families'],
             greetings: $sample['greetings'],
-            features: $template->features(),
+            features: $features,
             theme: $sample['theme'],
-            musicUrl: $sample['musicUrl'],
+            musicUrl: $dbMusicUrl,
             // Demo pages must behave like the real invitation once a visitor
             // opens it. The runtime retries on the first gesture when the
             // browser blocks audible autoplay.
