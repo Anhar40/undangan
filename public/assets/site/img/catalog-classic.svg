@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="Pratinjau tema undangan klasik">
+  <rect width="800" height="600" fill="#EFE5D7"/>
+  <circle cx="650" cy="90" r="110" fill="#FFFDF9" opacity=".55"/>
+  <rect x="170" y="54" width="460" height="492" rx="12" fill="#FFFDF9"/>
+  <rect x="190" y="74" width="420" height="452" rx="6" fill="none" stroke="#D9CBB9"/>
+  <text x="400" y="132" text-anchor="middle" font-family="Georgia, serif" font-size="15" letter-spacing="6" fill="#8F6D3D">SAVE THE DATE</text>
+  <path d="M310 152h180" stroke="#B5935A"/>
+  <text x="400" y="250" text-anchor="middle" font-family="Georgia, serif" font-size="44" fill="#2A2520">Nadia</text>
+  <text x="400" y="300" text-anchor="middle" font-family="Georgia, serif" font-size="28" font-style="italic" fill="#B5935A">dan</text>
+  <text x="400" y="350" text-anchor="middle" font-family="Georgia, serif" font-size="44" fill="#2A2520">Farhan</text>
+  <text x="400" y="408" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" letter-spacing="3" fill="#7C7167">12 OKTOBER 2026</text>
+  <path d="M300 446h200" stroke="#E9DFD2"/>
+  <text x="400" y="482" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#7C7167">Bandung · Jawa Barat</text>
+  <g fill="none" stroke="#B5935A" stroke-width="2">
+    <circle cx="238" cy="510" r="22"/><circle cx="562" cy="510" r="22"/>
+  </g>
+</svg>

@@ -1,0 +1,49 @@
+.wedding-inquiry-form {
+    width: 100%;
+    max-width: 800px; /* Optional: limit the maximum width of the form */
+    margin: 0 auto;
+    /*padding: 20px;*/
+    display:flex;
+    flex-direction:column;
+}
+
+.form-field {
+    margin-bottom: 15px;
+    display:flex;
+    flex-direction:column;
+    width:100%;
+}
+
+.form-field label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.form-field input,
+.form-field textarea,
+.form-field select {
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
+}
+
+.form-field textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.wedding-inquiry-form button {
+    display: inline-block;
+    background-color: #0073aa;
+    color: #ffffff;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.wedding-inquiry-form button:hover {
+    background-color: #005177;
+}

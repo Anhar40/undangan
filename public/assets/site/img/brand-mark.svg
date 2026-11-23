@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Tanda merek Undangan Digital">
+  <rect width="64" height="64" rx="18" fill="#B5935A"/>
+  <path d="M32 48C20.4 39.6 14 33.1 14 25.6A9.6 9.6 0 0 1 32 21a9.6 9.6 0 0 1 18 4.6C50 33.1 43.6 39.6 32 48Z" fill="#FDFBF8" opacity=".95"/>
+  <path d="M25 29.5c1.6-3.4 4.4-5.1 7-5.1s5.4 1.7 7 5.1" fill="none" stroke="#8F6D3D" stroke-width="2.2" stroke-linecap="round"/>
+  <circle cx="32" cy="34" r="4.3" fill="#B5935A"/>
+  <path d="M18 52h28" stroke="#FDFBF8" stroke-width="2.4" stroke-linecap="round" opacity=".8"/>
+</svg>
