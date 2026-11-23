@@ -2,9 +2,8 @@
 {
   "version": 2,
   "framework": null,
-  "public": true,
   "functions": {
-    "api/index.php": {
+    "api/*.php": {
       "runtime": "vercel-php@0.7.4",
       "memory": 1024,
       "maxDuration": 30
@@ -12,47 +11,18 @@
   },
   "installCommand": "npm ci",
   "buildCommand": "npm run build",
-  "outputDirectory": "public",
   "routes": [
     {
       "src": "/build/(.*)",
-      "dest": "/build/$1"
+      "dest": "/public/build/$1"
     },
     {
-      "src": "/assets/(.*)",
-      "dest": "/assets/$1"
-    },
-    {
-      "src": "/favicon.ico",
-      "dest": "/favicon.ico"
-    },
-    {
-      "src": "/robots.txt",
-      "dest": "/robots.txt"
-    },
-    {
-      "handle": "filesystem"
+      "src": "/(.*\\.(?:css|js|mjs|png|jpg|jpeg|webp|gif|svg|ico|woff|woff2|ttf|eot|avif|json|txt|xml|map))",
+      "dest": "/public/$1"
     },
     {
       "src": "/(.*)",
       "dest": "/api/index.php"
     }
-  ],
-  "env": {
-    "APP_ENV": "production",
-    "APP_DEBUG": "false",
-    "APP_CONFIG_CACHE": "/tmp/bootstrap/cache/config.php",
-    "APP_EVENTS_CACHE": "/tmp/bootstrap/cache/events.php",
-    "APP_PACKAGES_CACHE": "/tmp/bootstrap/cache/packages.php",
-    "APP_ROUTES_CACHE": "/tmp/bootstrap/cache/routes-v7.php",
-    "APP_SERVICES_CACHE": "/tmp/bootstrap/cache/services.php",
-    "VIEW_COMPILED_PATH": "/tmp/storage/framework/views",
-    "CACHE_DIRECTORY": "/tmp/storage/framework/cache/data",
-    "LOG_CHANNEL": "stderr",
-    "SESSION_DRIVER": "database",
-    "CACHE_STORE": "database",
-    "QUEUE_CONNECTION": "sync",
-    "FILESYSTEM_DISK": "cloudinary",
-    "APP_MAINTENANCE_DRIVER": "file"
-  }
+  ]
 }
