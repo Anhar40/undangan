@@ -44,6 +44,11 @@ return [
             'prefix_indexes' => true,
             'search_path' => env('DB_SCHEMA', 'public'),
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            // Neon pooler (PgBouncer transaction mode) is incompatible with
+            // server-side prepared statements; emulate prepares on the client.
+            'options' => extension_loaded('pdo_pgsql') ? array_filter([
+                PDO::ATTR_EMULATE_PREPARES => env('DB_EMULATE_PREPARES', true),
+            ]) : [],
         ],
 
         // Legacy MySQL connection kept for explicit local/testing use only.
