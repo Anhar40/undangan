@@ -691,6 +691,8 @@ class HtmlRewriter
             $html = preg_replace('/<html\b/i', '<html lang="id"', $html, 1) ?? $html;
         }
 
+        $html = $this->stripTemplateFavicons($html);
+
         $shareTitle = trim((string) ($data->shareTitle ?? ''));
         $shareDescription = trim((string) ($data->shareDescription ?? ''));
         $shareImage = trim((string) ($data->shareImage ?? ''));
@@ -1588,6 +1590,22 @@ JS;
         }
 
         return $selectors === [] ? '' : implode(',', array_keys($selectors)).'{display:none!important}';
+    }
+
+    private function stripTemplateFavicons(string $html): string
+    {
+        // Remove template/WordPress favicons so invitations use the app's own favicon.
+        $patterns = [
+            '~<link\b[^>]*\brel=["\'][^"\']*\b(?:icon|shortcut icon|apple-touch-icon|apple-touch-icon-precomposed|mask-icon)\b[^"\']*["\'][^>]*>\s*~i',
+            '~<meta\b[^>]*\bname=["\']msapplication-TileImage["\'][^>]*>\s*~i',
+            '~<meta\b[^>]*\bname=["\']msapplication-TileColor["\'][^>]*>\s*~i',
+        ];
+
+        foreach ($patterns as $pattern) {
+            $html = preg_replace($pattern, '', $html) ?? $html;
+        }
+
+        return $html;
     }
 
     private function absoluteUrl(string $path): string

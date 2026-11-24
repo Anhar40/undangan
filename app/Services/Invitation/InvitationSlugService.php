@@ -115,13 +115,13 @@ class InvitationSlugService
     }
 
     /**
-     * Use the couple's nickname slug when the current URL is still the old
-     * template-generated one. A customer-chosen slug is never overwritten
-     * unless --force is used by the backfill command.
+     * Keep public URL in sync with couple nicknames for system-managed slugs.
+     * Template-generated slugs and auto couple slugs (containing "-dan-") are
+     * updated; explicit custom slugs should be passed through change() instead.
      */
     public function syncFromCouple(Invitation $invitation, bool $force = false): bool
     {
-        if (! $force && ! $this->isTemplateGeneratedSlug($invitation)) {
+        if (! $force && ! $this->isTemplateGeneratedSlug($invitation) && ! $this->isCoupleNicknameSlug($invitation)) {
             return false;
         }
 
@@ -138,6 +138,11 @@ class InvitationSlugService
         }
 
         return $this->change($invitation, $slug);
+    }
+
+    private function isCoupleNicknameSlug(Invitation $invitation): bool
+    {
+        return str_contains((string) $invitation->slug, '-dan-');
     }
 
     private function nameForSlug(mixed $nickname, mixed $fullName): ?string

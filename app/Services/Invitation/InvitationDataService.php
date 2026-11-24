@@ -576,8 +576,14 @@ class InvitationDataService
             $size = false;
             if ($remote) {
                 // Avoid blocking render on slow remote image metadata fetches.
-                $context = stream_context_create(['http' => ['timeout' => 2.5, 'ignore_errors' => true], 'https' => ['timeout' => 2.5, 'ignore_errors' => true]]);
-                $size = @getimagesize($candidate, $info, $context);
+                try {
+                    $response = \Illuminate\Support\Facades\Http::timeout(2.5)->get($candidate);
+                    if ($response->successful()) {
+                        $size = @getimagesizefromstring($response->body());
+                    }
+                } catch (\Throwable) {
+                    $size = false;
+                }
             } else {
                 $size = @getimagesize($candidate);
             }

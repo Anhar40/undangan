@@ -59,7 +59,7 @@
             </div>
         </div>
         <div class="editor-actions">
-            <a class="btn btn-secondary" href="{{ $shareUrl }}">Bagikan</a>
+            <a class="btn btn-secondary" href="{{ $shareUrl }}" data-share-url-link>Bagikan</a>
             <a class="btn btn-secondary" href="{{ $templateSelectUrl }}">
                 {{ $canSwitchTemplate ? 'Pilih Template' : 'Lihat Template' }}
             </a>
@@ -1138,6 +1138,9 @@
             setSectionState(key, 'Tersimpan', 'saved');
             refreshGlobalState();
             flash(sectionTitle(key) + ' tersimpan.', 'success');
+            if (payload.share_url) {
+                document.querySelectorAll('[data-share-url-link]').forEach(function (a) { a.href = payload.share_url; });
+            }
 
             const nextKey = button ? button.dataset.nextSection : '';
             if (nextKey) {
