@@ -59,7 +59,7 @@
             @endif
         </form>
 
-        <form method="POST" action="{{ route('invitations.payment.start', $invitation) }}">
+        <form method="POST" action="{{ route('invitations.payment.start', $invitation) }}" data-swal-loading="Membuat pembayaran...">
             @csrf
             <input type="hidden" name="voucher_code" value="{{ $appliedVoucher?->code ?? '' }}">
 

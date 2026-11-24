@@ -126,13 +126,23 @@
             <main id="customer-main" class="customer-main" tabindex="-1">
                 <div class="alert-stack">
                     @if (session('status'))
-                        <div class="alert alert-success" role="status">
+                        <div class="alert alert-success" role="status" data-flash-success="{{ session('status') }}">
                             <span>{{ session('status') }}</span>
                         </div>
                     @endif
                     @if (session('error'))
-                        <div class="alert alert-error" role="alert">
+                        <div class="alert alert-error" role="alert" data-flash-error="{{ session('error') }}">
                             <span>{{ session('error') }}</span>
+                        </div>
+                    @endif
+                    @if (session('warning'))
+                        <div class="alert alert-warning" role="status" data-flash-warning="{{ session('warning') }}">
+                            <span>{{ session('warning') }}</span>
+                        </div>
+                    @endif
+                    @if (session('info'))
+                        <div class="alert alert-info" role="status" data-flash-info="{{ session('info') }}">
+                            <span>{{ session('info') }}</span>
                         </div>
                     @endif
                 </div>
@@ -166,6 +176,7 @@
     </nav>
 
     <div class="toast" role="status" aria-live="polite" data-toast></div>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
     <script src="{{ asset('assets/site/js/site.js') }}" defer></script>
     <script src="{{ asset('assets/site/js/customer.js') }}" defer></script>
     @stack('scripts')

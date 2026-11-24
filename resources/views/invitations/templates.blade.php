@@ -123,9 +123,27 @@
 (function () {
     document.querySelectorAll('[data-template-switch]').forEach(function (form) {
         form.addEventListener('submit', function (event) {
+            if (form.dataset.confirmed === '1') return;
+            event.preventDefault();
             var name = form.getAttribute('data-template-name') || 'template ini';
-            if (!window.confirm('Ganti template menjadi ' + name + '? Isi undangan tetap tersimpan.')) {
-                event.preventDefault();
+            var doSubmit = function () {
+                form.dataset.confirmed = '1';
+                var btn = form.querySelector('button[type="submit"]');
+                if (btn) { btn.disabled = true; btn.textContent = 'Memproses...'; }
+                if (window.InviteUI && window.InviteUI.hasSwal()) {
+                    Swal.fire({ title: 'Mengganti template...', text: 'Mohon tunggu sebentar.', allowOutsideClick: false, allowEscapeKey: false, didOpen: function () { Swal.showLoading(); } });
+                }
+                form.submit();
+            };
+            if (window.InviteUI) {
+                window.InviteUI.confirm({
+                    icon: 'question',
+                    title: 'Ganti template?',
+                    text: 'Template akan diganti menjadi ' + name + '. Isi undangan tetap tersimpan.',
+                    confirmButtonText: 'Ya, ganti template',
+                }).then(function (r) { if (r.isConfirmed) doSubmit(); });
+            } else {
+                if (window.confirm('Ganti template menjadi ' + name + '? Isi undangan tetap tersimpan.')) doSubmit();
             }
         });
     });

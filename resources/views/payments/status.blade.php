@@ -123,7 +123,7 @@
                     @if ($transaction->snap_url)
                         <a class="btn btn-secondary" href="{{ $transaction->snap_url }}" target="_blank" rel="noopener">Lanjutkan Pembayaran</a>
                     @endif
-                    <form method="POST" action="{{ route('invitations.payment.check', $invitation) }}">
+                    <form method="POST" action="{{ route('invitations.payment.check', $invitation) }}" data-swal-loading="Memeriksa status pembayaran...">
                         @csrf
                         <button type="submit" class="btn btn-secondary">Periksa Ulang Status</button>
                     </form>

@@ -1043,7 +1043,7 @@ class InvitationEditorService
 
     /**
      * Downscale oversized uploads before storage. GD is optional: when it is
-     * unavailable the validated original is kept so shared hosting still works.
+     * unavailable or fails (memory), the validated original is kept.
      */
     private function optimize(UploadedFile $file): UploadedFile
     {
@@ -1053,7 +1053,6 @@ class InvitationEditorService
 
         $source = $file->getRealPath();
         $info = $source ? @getimagesize($source) : false;
-
         if (! is_array($info)) {
             return $file;
         }
@@ -1061,81 +1060,121 @@ class InvitationEditorService
         $max = max(1, (int) config('invitation.upload.max_dimension', 1600));
         $width = (int) ($info[0] ?? 0);
         $height = (int) ($info[1] ?? 0);
+        $type = (int) ($info[2] ?? 0);
 
-        if ($width <= $max && $height <= $max) {
+        if ($width < 1 || $height < 1) {
             return $file;
         }
 
-        $ratio = min($max / $width, $max / $height);
-        $newWidth = max(1, (int) floor($width * $ratio));
-        $newHeight = max(1, (int) floor($height * $ratio));
+        $needsResize = $width > $max || $height > $max;
+        // Re-encode large originals even if within dimension limit to reduce payload.
+        $needsReencode = $file->getSize() !== false && $file->getSize() > (900 * 1024);
+        if (! $needsResize && ! $needsReencode) {
+            return $file;
+        }
 
-        switch ((int) ($info[2] ?? 0)) {
-            case IMAGETYPE_JPEG:
-                $original = @imagecreatefromjpeg($source);
-                break;
-            case IMAGETYPE_PNG:
-                $original = @imagecreatefrompng($source);
-                break;
-            case IMAGETYPE_WEBP:
-                $original = @imagecreatefromwebp($source);
-                break;
-            default:
+        $prevLimit = ini_get('memory_limit');
+        @ini_set('memory_limit', '512M');
+
+        try {
+            $ratio = $needsResize ? min($max / $width, $max / $height) : 1;
+            $newWidth = max(1, (int) floor($width * $ratio));
+            $newHeight = max(1, (int) floor($height * $ratio));
+
+            $original = match ($type) {
+                IMAGETYPE_JPEG => @imagecreatefromjpeg($source),
+                IMAGETYPE_PNG => @imagecreatefrompng($source),
+                IMAGETYPE_WEBP => function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($source) : false,
+                default => false,
+            };
+
+            if ($original === false) {
                 return $file;
-        }
+            }
 
-        if ($original === false) {
-            return $file;
-        }
+            $resized = @imagecreatetruecolor($newWidth, $newHeight);
+            if ($resized === false) {
+                imagedestroy($original);
+                return $file;
+            }
 
-        $resized = imagecreatetruecolor($newWidth, $newHeight);
+            // Preserve PNG alpha; fill white for JPEG to avoid black background.
+            if ($type === IMAGETYPE_PNG) {
+                imagealphablending($resized, false);
+                imagesavealpha($resized, true);
+                $transparent = imagecolorallocatealpha($resized, 0, 0, 0, 127);
+                imagefilledrectangle($resized, 0, 0, $newWidth, $newHeight, $transparent);
+            } elseif ($type === IMAGETYPE_WEBP) {
+                imagealphablending($resized, false);
+                imagesavealpha($resized, true);
+            } else {
+                $white = imagecolorallocate($resized, 255, 255, 255);
+                imagefilledrectangle($resized, 0, 0, $newWidth, $newHeight, $white);
+            }
 
-        if ($resized === false) {
-            imagedestroy($original);
+            imagecopyresampled($resized, $original, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
 
-            return $file;
-        }
+            $temporary = tempnam(sys_get_temp_dir(), 'ud-img-');
+            if ($temporary === false) {
+                imagedestroy($original);
+                imagedestroy($resized);
+                return $file;
+            }
 
-        imagealphablending($resized, false);
-        imagesavealpha($resized, true);
-        imagecopyresampled($resized, $original, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+            $mime = 'image/jpeg';
+            $ok = false;
+            switch ($type) {
+                case IMAGETYPE_PNG:
+                    $ok = imagepng($resized, $temporary, 6);
+                    $mime = 'image/png';
+                    break;
+                case IMAGETYPE_WEBP:
+                    if (function_exists('imagewebp')) {
+                        $ok = imagewebp($resized, $temporary, 82);
+                        $mime = 'image/webp';
+                    } else {
+                        $ok = imagejpeg($resized, $temporary, 82);
+                        $mime = 'image/jpeg';
+                    }
+                    break;
+                default:
+                    $ok = imagejpeg($resized, $temporary, 82);
+                    $mime = 'image/jpeg';
+                    break;
+            }
 
-        $temporary = tempnam(sys_get_temp_dir(), 'ud-img-') ?: null;
-
-        if ($temporary === null) {
             imagedestroy($original);
             imagedestroy($resized);
 
+            if (! $ok || ! is_file($temporary) || filesize($temporary) === 0) {
+                @unlink($temporary);
+                return $file;
+            }
+
+            // Only use optimized file if it's smaller or we had to resize.
+            $optimizedSize = filesize($temporary);
+            $originalSize = $file->getSize();
+            if (! $needsResize && $originalSize !== false && $optimizedSize !== false && $optimizedSize >= $originalSize) {
+                @unlink($temporary);
+                return $file;
+            }
+
+            $this->optimizedTempPath = $temporary;
+
+            return new UploadedFile(
+                $temporary,
+                $file->getClientOriginalName(),
+                $mime,
+                null,
+                true,
+            );
+        } catch (\Throwable) {
             return $file;
+        } finally {
+            if (is_string($prevLimit) && $prevLimit !== '') {
+                @ini_set('memory_limit', $prevLimit);
+            }
         }
-
-        switch ((int) ($info[2] ?? 0)) {
-            case IMAGETYPE_PNG:
-                imagepng($resized, $temporary, 6);
-                $mime = 'image/png';
-                break;
-            case IMAGETYPE_WEBP:
-                imagewebp($resized, $temporary, 82);
-                $mime = 'image/webp';
-                break;
-            default:
-                imagejpeg($resized, $temporary, 82);
-                $mime = 'image/jpeg';
-                break;
-        }
-
-        imagedestroy($original);
-        imagedestroy($resized);
-
-        $this->optimizedTempPath = $temporary;
-
-        return new UploadedFile(
-            $temporary,
-            $file->getClientOriginalName(),
-            $mime,
-            null,
-            true,
-        );
     }
 
     private function nullableString(mixed $value): ?string

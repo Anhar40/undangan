@@ -119,7 +119,7 @@
                                     <a href="{{ $invitation->publicUrl() }}" target="_blank" rel="noopener">Buka Undangan</a>
                                 @endif
                                 @can('delete', $invitation)
-                                    <form method="POST" action="{{ route('invitations.destroy', $invitation) }}" onsubmit="return confirm('Hapus draft ini? Tindakan ini tidak dapat dibatalkan.');">
+                                    <form method="POST" action="{{ route('invitations.destroy', $invitation) }}" data-swal-confirm="Hapus draft ini? Tindakan ini tidak dapat dibatalkan." data-swal-title="Hapus draft?" data-swal-confirm-text="Ya, hapus" data-swal-icon="warning" data-swal-danger="1">
                                         @csrf
                                         @method('DELETE')
                                         <button class="btn-link-danger" type="submit">Hapus Draft</button>

@@ -255,9 +255,9 @@ class UpdateInvitationRequest extends FormRequest
             'nullable',
             'image',
             'mimes:jpg,jpeg,png,webp',
-            'max:' . (int) config('invitation.upload.max_kb', 5120),
-            'dimensions:max_width=' . (int) config('invitation.upload.max_dimension', 1600)
-                . ',max_height=' . (int) config('invitation.upload.max_dimension', 1600),
+            // Accept large originals; client-side compression + server-side optimize() handle size.
+            'max:' . max((int) config('invitation.upload.max_kb', 5120), 30720),
+            'dimensions:max_width=16000,max_height=16000',
         ];
 
         $backgroundRules = [];

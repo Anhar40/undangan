@@ -80,6 +80,15 @@
     @endif
 
     <div id="editor-feedback" class="alert editor-feedback" hidden role="status" aria-live="polite"></div>
+    <div id="editor-upload-progress" class="editor-upload-progress" hidden aria-live="polite">
+        <div class="editor-upload-progress-head">
+            <span id="editor-upload-progress-label">Mengunggah...</span>
+            <strong id="editor-upload-progress-value">0%</strong>
+        </div>
+        <div class="editor-upload-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div id="editor-upload-progress-bar" class="editor-upload-progress-bar" style="width:0%"></div>
+        </div>
+    </div>
 
     <div class="editor-workspace">
         <aside class="editor-nav card" aria-label="Bagian pengelolaan undangan">
@@ -915,15 +924,20 @@
         const items = Array.isArray(message) ? message : [message];
         if (items.length === 1) {
             feedback.textContent = items[0];
-            return;
+        } else {
+            const list = document.createElement('ul');
+            items.forEach(function (item) {
+                const li = document.createElement('li');
+                li.textContent = item;
+                list.appendChild(li);
+            });
+            feedback.appendChild(list);
         }
-        const list = document.createElement('ul');
-        items.forEach(function (item) {
-            const li = document.createElement('li');
-            li.textContent = item;
-            list.appendChild(li);
-        });
-        feedback.appendChild(list);
+        if (window.InviteUI) {
+            const text = items.join('\n');
+            if (kind === 'error') window.InviteUI.error(items.length === 1 ? items[0] : 'Ada kesalahan pada input.', { timer: 4500 });
+            else window.InviteUI.success(items.length === 1 ? items[0] : text);
+        }
     }
 
     function errorsFrom(payload) {
@@ -940,8 +954,91 @@
         const label = button.querySelector('.btn-label');
         if (label) {
             if (!label.dataset.original) label.dataset.original = label.textContent;
-            label.textContent = loading ? 'Menyimpan…' : label.dataset.original;
+            label.textContent = loading ? 'Menyimpan...' : label.dataset.original;
         }
+    }
+
+    const uploadProgress = document.getElementById('editor-upload-progress');
+    const uploadProgressLabel = document.getElementById('editor-upload-progress-label');
+    const uploadProgressValue = document.getElementById('editor-upload-progress-value');
+    const uploadProgressBar = document.getElementById('editor-upload-progress-bar');
+    const uploadProgressTrack = uploadProgress ? uploadProgress.querySelector('[role="progressbar"]') : null;
+
+    function showUploadProgress(label, percent, compressing) {
+        if (!uploadProgress) return;
+        uploadProgress.hidden = false;
+        uploadProgress.classList.toggle('is-compressing', !!compressing);
+        if (uploadProgressLabel) uploadProgressLabel.textContent = label || 'Mengunggah...';
+        const p = Math.max(0, Math.min(100, Math.round(percent || 0)));
+        if (uploadProgressValue) uploadProgressValue.textContent = p + '%';
+        if (uploadProgressBar) uploadProgressBar.style.width = p + '%';
+        if (uploadProgressTrack) uploadProgressTrack.setAttribute('aria-valuenow', String(p));
+    }
+
+    function hideUploadProgress() {
+        if (!uploadProgress) return;
+        uploadProgress.hidden = true;
+        uploadProgress.classList.remove('is-compressing');
+        if (uploadProgressBar) uploadProgressBar.style.width = '0%';
+        if (uploadProgressValue) uploadProgressValue.textContent = '0%';
+        if (uploadProgressTrack) uploadProgressTrack.setAttribute('aria-valuenow', '0');
+    }
+
+    async function compressPanelImages(panel) {
+        const inputs = Array.from(panel.querySelectorAll('input[type="file"]')).filter(function (input) {
+            return !input.disabled && input.files && input.files.length > 0;
+        });
+        if (inputs.length === 0 || !window.InviteCompress) return;
+        const total = inputs.reduce(function (n, i) { return n + i.files.length; }, 0);
+        let done = 0;
+        showUploadProgress('Mengompres foto...', 0, true);
+        for (const input of inputs) {
+            const files = Array.from(input.files || []);
+            const out = [];
+            for (const file of files) {
+                const compressed = await window.InviteCompress.compressImage(file);
+                out.push(compressed);
+                done += 1;
+                showUploadProgress('Mengompres foto (' + done + '/' + total + ')...', Math.round((done / total) * 100), true);
+            }
+            if (out.length > 0) {
+                try {
+                    const dt = new DataTransfer();
+                    out.forEach(function (f) { dt.items.add(f); });
+                    input.files = dt.files;
+                } catch (e) { /* leave original */ }
+            }
+        }
+    }
+
+    function postFormWithProgress(url, formData) {
+        return new Promise(function (resolve, reject) {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', url, true);
+            xhr.setRequestHeader('Accept', 'application/json');
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+            xhr.upload.onprogress = function (event) {
+                if (event.lengthComputable) {
+                    const pct = Math.round((event.loaded / event.total) * 100);
+                    showUploadProgress('Mengunggah data...', pct, false);
+                } else {
+                    showUploadProgress('Mengunggah data...', 50, false);
+                }
+            };
+            xhr.upload.onload = function () { showUploadProgress('Memproses...', 100, false); };
+            xhr.onerror = function () { reject(new Error('Network error')); };
+            xhr.onabort = function () { reject(new Error('Aborted')); };
+                        xhr.onload = function () {
+                let payload = {};
+                try { payload = JSON.parse(xhr.responseText || '{}'); } catch (e) {
+                    if (xhr.status === 413) payload = { message: 'File terlalu besar untuk diunggah. Coba kurangi jumlah/ukuran foto.' };
+                    else payload = { message: 'Server mengembalikan respons tidak valid. Coba lagi.' };
+                }
+                if (xhr.status === 413 && !payload.message) payload.message = 'File terlalu besar untuk diunggah.';
+                resolve({ ok: xhr.status >= 200 && xhr.status < 300, status: xhr.status, payload: payload });
+            };
+            xhr.send(formData);
+        });
     }
 
     function validatePanel(panel) {
@@ -1032,20 +1129,17 @@
         if (!panel || !validatePanel(panel)) return;
 
         setLoading(button, true);
-        setSectionState(key, 'Menyimpan…', 'dirty');
+        setSectionState(key, 'Menyimpan...', 'dirty');
+        hideUploadProgress();
 
         try {
-            const response = await fetch(form.action, {
-                method: 'POST',
-                body: buildPayload(panel),
-                headers: {
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-            });
-            const payload = await response.json().catch(function () { return {}; });
+            await compressPanelImages(panel);
+            showUploadProgress('Mengunggah data...', 0, false);
+            const payloadData = buildPayload(panel);
+            const result = await postFormWithProgress(form.action, payloadData);
+            const payload = result.payload || {};
 
-            if (!response.ok) {
+            if (!result.ok) {
                 setSectionState(key, 'Gagal disimpan', 'error');
                 flash(errorsFrom(payload), 'error');
                 focusFirstError(payload);
@@ -1072,8 +1166,9 @@
             }
         } catch (error) {
             setSectionState(key, 'Gagal disimpan', 'error');
-            flash('Koneksi terputus. Perubahan belum tersimpan.', 'error');
+            flash('Koneksi terputus atau file terlalu besar. Perubahan belum tersimpan.', 'error');
         } finally {
+            hideUploadProgress();
             setLoading(button, false);
         }
     }
@@ -1231,9 +1326,9 @@
         }
     });
 
-    form.addEventListener('change', function (event) {
+    form.addEventListener('change', async function (event) {
         const input = event.target;
-        if (!input.matches || !input.matches('input[type="file"][data-preview]')) return;
+        if (!input.matches || !input.matches('input[type=\"file\"][data-preview]')) return;
 
         const target = document.getElementById(input.dataset.preview);
         if (!target) return;
@@ -1250,23 +1345,31 @@
             input.insertAdjacentElement('afterend', clear);
         }
 
-        const file = input.files && input.files[0];
-        if (!file) {
-            clear.hidden = true;
-            return;
-        }
+        const originalFile = input.files && input.files[0];
+        if (!originalFile) { clear.hidden = true; return; }
 
+        clear.hidden = true;
+        if (window.InviteUI) window.InviteUI.info('Memproses foto...');
+        try {
+            if (window.InviteCompress && /^image\/(jpeg|png|webp)$/i.test(originalFile.type)) {
+                await window.InviteCompress.compressFileInput(input);
+            }
+        } catch (e) { /* use original */ }
+        const file = input.files && input.files[0];
+        if (!file) { clear.hidden = true; return; }
         setPreviewFromFiles(target, file);
         clear.hidden = false;
+        markDirty(input);
     });
 
-    document.querySelectorAll('input[type="file"][data-preview-list]').forEach(function (input) {
+    document.querySelectorAll('input[type=\"file\"][data-preview-list]').forEach(function (input) {
         const target = document.getElementById(input.dataset.previewList);
         if (!target) return;
-
         const objectUrls = [];
-
-        input.addEventListener('change', function () {
+        input.addEventListener('change', async function () {
+            if (window.InviteCompress && input.files && input.files.length) {
+                try { await window.InviteCompress.compressFileInput(input); } catch (e) { /* original */ }
+            }
             objectUrls.splice(0).forEach(function (url) { URL.revokeObjectURL(url); });
             target.replaceChildren();
             Array.from(input.files || []).forEach(function (file) {
@@ -1283,6 +1386,7 @@
                 figure.appendChild(caption);
                 target.appendChild(figure);
             });
+            markDirty(input);
         });
     });
 
@@ -1350,6 +1454,11 @@
     .editor-meta { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
     .editor-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
     .editor-feedback { margin-bottom: 14px; }
+    .editor-upload-progress { margin-bottom: 14px; padding: 12px 14px; border: 1px solid rgba(181,147,90,.28); border-radius: 12px; background: #fffaf2; }
+    .editor-upload-progress-head { display:flex; justify-content:space-between; gap:12px; font-size:.88rem; margin-bottom:8px; color:#5a4a2f; }
+    .editor-upload-progress-track { width:100%; height:10px; background:#eadfca; border-radius:999px; overflow:hidden; }
+    .editor-upload-progress-bar { height:100%; width:0%; background:linear-gradient(90deg,#b5935a,#d4b273); transition:width .15s ease; }
+    .editor-upload-progress.is-compressing .editor-upload-progress-bar { background:linear-gradient(90deg,#8b7040,#b5935a); }
     .editor-workspace { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 16px; align-items: start; }
     .editor-nav { position: sticky; top: calc(var(--header-h) + 16px); padding: 16px; }
     .editor-nav-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }

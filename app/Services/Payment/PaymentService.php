@@ -54,6 +54,7 @@ class PaymentService
                 $user,
                 $paymentType,
                 $expiryMinutes,
+                $voucherCode,
             ): array {
                 $locked = Invitation::whereKey($invitation->id)->lockForUpdate()->firstOrFail();
                 $this->assertOwner($locked, $user);
