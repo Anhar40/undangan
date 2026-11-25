@@ -80,7 +80,93 @@ class PaymentService
                 $grossAmount = max(0, $originalAmount - $discountAmount);
 
                 if ($grossAmount <= 0) {
-                    throw new PaymentNotAllowedException('Nominal pembayaran setelah diskon tidak valid.');
+                    if (! $voucher instanceof Voucher) {
+                        throw new PaymentNotAllowedException('Nominal pembayaran setelah diskon tidak valid.');
+                    }
+
+                    $existingFree = $locked->transactions()
+                        ->where('voucher_id', $voucher->id)
+                        ->whereIn('transaction_status', [PaymentStatus::Paid->value, PaymentStatus::Settlement->value])
+                        ->latest()
+                        ->first();
+
+                    if ($existingFree instanceof Transaction) {
+                        return ['existing' => $existingFree];
+                    }
+
+                    $attempt = (int) $locked->transactions()->count() + 1;
+                    $idempotencyKey = hash('sha256', implode('|', [
+                        $locked->id,
+                        $user->id,
+                        'free_voucher',
+                        0,
+                        (int) $voucher->id,
+                        $attempt,
+                    ]));
+                    $orderId = 'UD-' . $locked->id . '-FREE-' . strtoupper(substr($idempotencyKey, 0, 8)) . '-' . $attempt;
+
+                    $known = Transaction::where('idempotency_key', $idempotencyKey)->first();
+                    if ($known instanceof Transaction) {
+                        return ['existing' => $known];
+                    }
+
+                    $lockedVoucher = Voucher::whereKey($voucher->id)->lockForUpdate()->first();
+                    if (! $lockedVoucher || ! $lockedVoucher->isAvailableForAmount($originalAmount)) {
+                        throw new PaymentNotAllowedException('Voucher tidak dapat digunakan untuk transaksi ini.');
+                    }
+
+                    $transaction = Transaction::create([
+                        'user_id' => (int) $user->id,
+                        'invitation_id' => (int) $locked->id,
+                        'voucher_id' => $lockedVoucher->id,
+                        'voucher_code' => $lockedVoucher->code,
+                        'order_id' => $orderId,
+                        'idempotency_key' => $idempotencyKey,
+                        'gross_amount' => 0,
+                        'original_amount' => $originalAmount,
+                        'voucher_discount_amount' => $lockedVoucher->discountFor($originalAmount),
+                        'payment_method' => 'voucher',
+                        'payment_type' => 'voucher',
+                        'payment_label' => 'Voucher 100%',
+                        'payment_reference' => $lockedVoucher->code,
+                        'payment_instructions' => [
+                            'label' => 'Voucher 100%',
+                            'reference' => $lockedVoucher->code,
+                            'steps' => ['Undangan diaktifkan menggunakan voucher gratis.'],
+                        ],
+                        'transaction_status' => PaymentStatus::Settlement,
+                        'paid_at' => now(),
+                        'verified_at' => now(),
+                        'voucher_redeemed_at' => now(),
+                        'midtrans_response' => [
+                            'source' => 'voucher',
+                            'voucher_code' => $lockedVoucher->code,
+                        ],
+                    ]);
+
+                    $lockedVoucher->increment('used_count');
+
+                    $wasActive = $locked->status === InvitationStatus::Active;
+                    $isSuspended = $locked->status === InvitationStatus::Suspended;
+                    $update = ['payment_status' => PaymentStatus::Settlement];
+                    if (! $wasActive && ! $isSuspended) {
+                        $update['status'] = InvitationStatus::Active;
+                        $update['activated_at'] = now();
+                        $update['active_expires_at'] = now()->addYear();
+                        $update['published_at'] = $locked->published_at ?? now();
+                    }
+                    $locked->update($update);
+
+                    ActivityLog::create([
+                        'user_id' => (int) $user->id,
+                        'action' => 'invitation.activated_voucher',
+                        'subject_type' => 'invitation',
+                        'subject_id' => (int) $locked->id,
+                        'description' => 'Undangan ' . $locked->slug . ' diaktifkan dengan voucher gratis ' . $voucher->code . '.',
+                        'ip_address' => request()->ip(),
+                    ]);
+
+                    return ['existing' => $transaction->fresh()];
                 }
 
                 $pending = $locked->transactions()

@@ -79,7 +79,12 @@ class PaymentController extends Controller
                 config('services.midtrans.default_payment_type', 'qris'),
             );
             $voucherCode = strtoupper(trim((string) $request->input('voucher_code', '')));
-            $service->begin($invitation, $request->user(), $paymentType, $voucherCode !== '' ? $voucherCode : null);
+            $transaction = $service->begin($invitation, $request->user(), $paymentType, $voucherCode !== '' ? $voucherCode : null);
+
+            if ($transaction->isSuccessful()) {
+                return redirect()->route('invitations.payment.status', $invitation)
+                    ->with('status', 'Voucher berhasil diklaim. Undangan Anda sudah aktif.');
+            }
 
             return redirect()->route('invitations.payment.status', $invitation)
                 ->with('status', 'Silakan selesaikan pembayaran untuk mengaktifkan undangan.');

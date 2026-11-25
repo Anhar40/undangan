@@ -59,30 +59,38 @@
             @endif
         </form>
 
-        <form method="POST" action="{{ route('invitations.payment.start', $invitation) }}" data-swal-loading="Membuat pembayaran...">
+        @php $isFree = $finalPrice <= 0 && $appliedVoucher; @endphp
+        <form method="POST" action="{{ route('invitations.payment.start', $invitation) }}" data-swal-loading="{{ $isFree ? 'Mengaktifkan undangan...' : 'Membuat pembayaran...' }}">
             @csrf
             <input type="hidden" name="voucher_code" value="{{ $appliedVoucher?->code ?? '' }}">
 
-            <label class="field">
-                <span class="field-label">Metode Pembayaran</span>
-                <select name="payment_method" required>
-                    @foreach ($methods as $value => $label)
-                        <option value="{{ $value }}" @selected($value === $default)>{{ $label }}</option>
-                    @endforeach
-                </select>
-            </label>
-
-            @if ($pendingTransaction ?? null)
-                <div class="alert alert-warning" style="margin-top:18px">
-                    <span>Metode {{ $pendingTransaction->payment_label ?? 'sebelumnya' }} masih menunggu pembayaran. Memilih metode lain atau voucher berbeda akan membatalkan pembayaran tersebut dan membuat instruksi baru.</span>
+            @if ($isFree)
+                <div class="alert alert-success" style="margin-top:6px">
+                    <span>Voucher <strong>{{ $appliedVoucher->code }}</strong> menanggung seluruh biaya aktivasi. Undangan akan langsung aktif tanpa pembayaran.</span>
                 </div>
+                <button type="submit" class="btn btn-primary">Klaim Gratis & Aktifkan</button>
+            @else
+                <label class="field">
+                    <span class="field-label">Metode Pembayaran</span>
+                    <select name="payment_method" required>
+                        @foreach ($methods as $value => $label)
+                            <option value="{{ $value }}" @selected($value === $default)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </label>
+
+                @if ($pendingTransaction ?? null)
+                    <div class="alert alert-warning" style="margin-top:18px">
+                        <span>Metode {{ $pendingTransaction->payment_label ?? 'sebelumnya' }} masih menunggu pembayaran. Memilih metode lain atau voucher berbeda akan membatalkan pembayaran tersebut dan membuat instruksi baru.</span>
+                    </div>
+                @endif
+
+                <div class="alert" style="margin-top:6px">
+                    <span>Undangan hanya aktif setelah notifikasi pembayaran terverifikasi. Halaman sukses bukan bukti pembayaran.</span>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Buat Pembayaran</button>
             @endif
-
-            <div class="alert" style="margin-top:6px">
-                <span>Undangan hanya aktif setelah notifikasi pembayaran terverifikasi. Halaman sukses bukan bukti pembayaran.</span>
-            </div>
-
-            <button type="submit" class="btn btn-primary">Buat Pembayaran</button>
         </form>
     </div>
 </div>
