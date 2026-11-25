@@ -1701,8 +1701,7 @@ JS;
             if ($address !== '' && $locationName !== '') {
                 $locationName = trim(str_replace($address, '', $locationName));
             }
-            $locationName = trim($locationName, ' 
-	 ,-');
+            $locationName = trim($locationName, " \t\n\r\0\x0B,-");
             if ($locationName === '') {
                 $locationName = $address !== '' ? $address : $locationLabel;
             }
