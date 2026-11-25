@@ -34,6 +34,7 @@
     <meta name="twitter:image" content="{{ $seoImage }}">
     <title>{{ $seoTitle }}</title>
     @stack('head_meta')
+    <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="48x48">
     <link rel="icon" href="{{ asset('assets/site/img/favicon.svg') }}" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

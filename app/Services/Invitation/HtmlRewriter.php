@@ -747,7 +747,9 @@ class HtmlRewriter
         $head = '<meta name="viewport" content="width=device-width, initial-scale=1">'."\n"
             .'<meta name="theme-color" content="#B5935A">'."\n"
             .'<meta name="robots" content="'.$this->e($robots).'">'."\n"
+            .'<link rel="icon" href="/favicon.ico" sizes="48x48">'."\n"
             .'<link rel="icon" href="/assets/site/img/favicon.svg" type="image/svg+xml">'."\n"
+            .'<link rel="apple-touch-icon" href="/assets/site/img/favicon-64.png">'."\n"
             ."<title>{$title}</title>\n"
             .'<meta name="description" content="'.$description.'">'."\n"
             .'<meta property="og:type" content="website">'."\n"
@@ -966,6 +968,7 @@ class HtmlRewriter
         return '<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">'
             .'<meta name="viewport" content="width=device-width, initial-scale=1">'
             .'<meta name="theme-color" content="#B5935A">'
+            .'<link rel="icon" href="/favicon.ico" sizes="48x48">'
             .'<link rel="icon" href="/assets/site/img/favicon.svg" type="image/svg+xml">'
             .'<title>Aktivasi Diperlukan — '.$this->e($data->title).'</title>'
             .'<style>'
