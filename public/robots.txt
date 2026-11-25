@@ -13,4 +13,4 @@ Disallow: /share
 Disallow: /api/
 Disallow: /storage/
 
-Sitemap: https://undangan233.vercel.app/sitemap.xml
+Sitemap: https://www.undang-aja.web.id/sitemap.xml
